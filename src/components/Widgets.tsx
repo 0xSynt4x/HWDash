@@ -125,11 +125,11 @@ export const NetworkWidget = ({ networkName, setNetworkName, nicIndex, getStr, g
   return (
     <Panel className="min-w-[240px]">
       <div onContextMenu={onContextMenu} className="cursor-context-menu" title="Right click to change Network Adapter">
-        <PanelHeader icon={Globe} title={networkName} onTitleChange={setNetworkName} rightText={<div>{getStr(`SNIC${nicIndex}CONNSPD`)} <span className="opacity-50 text-[10px]">MBPS</span></div>} />
+        <PanelHeader icon={Globe} title={networkName} onTitleChange={setNetworkName} rightText={<div>{getStr(`SNIC${nicIndex}TOTDL`)} <span className="opacity-50 text-[10px]">MBPS</span></div>} />
         <div className="p-1 py-1">
           <StatRow icon={Download} label={<div className="flex items-center gap-1">DOWNLOAD <span className={`w-1.5 h-1.5 rounded-full ${isDownloading ? 'bg-[var(--accent)] animate-pulse shadow-[0_0_5px_var(--accent)]' : 'bg-transparent'}`}></span></div>} value={<div>{getStr(`SNIC${nicIndex}DLRATE`)} <span className="opacity-50 text-[9px]">KB/S</span></div>} />
           <StatRow icon={Upload} label="UPLOAD:" value={<div>{getStr(`SNIC${nicIndex}ULRATE`)} <span className="opacity-50 text-[9px]">KB/S</span></div>} />
-          <StatRow icon={Network} label="LOCAL IP:" value={getStr('SPRIIIPADDR', '127.0.0.1')} />
+          <StatRow icon={Network} label="LOCAL IP:" value={getStr('SPRIIPADDR', '127.0.0.1')} />
         </div>
       </div>
     </Panel>

@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "npm run prebuild && npm run build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -15,7 +15,6 @@
         "title": "HWDash",
         "width": 260,
         "height": 960,
-        "resizable": true,
         "decorations": false,
         "transparent": true,
         "skipTaskbar": true,

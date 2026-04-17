@@ -92,7 +92,9 @@ export default function App() {
       const w = isVertical ? 280 : 860;
       const h = isVertical ? 960 : 480;
       getCurrentWindow().setSize(new LogicalSize(w * zoom, h * zoom));
-    }).catch(() => {});
+    }).catch(() => {
+      // Not in Tauri environment, ignore
+    });
   }, [layout, zoom, isVertical]);
 
   return (
