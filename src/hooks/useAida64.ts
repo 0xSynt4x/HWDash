@@ -11,6 +11,11 @@ export function useAida64() {
 
     const hwInterval = setInterval(async () => {
       try {
+        if (!('__TAURI_INTERNALS__' in window)) {
+           // Provide some mock data or simply exit early in browser
+           setStatus('Browser mode (No AIDA64)');
+           return;
+        }
         // 使用 Tauri 的 invoke 调用 Rust 后端的 get_hardware_data 函数
         const rawData = await invoke<Record<string, string>>('get_hardware_data');
         if (rawData && Object.keys(rawData).length > 0) {

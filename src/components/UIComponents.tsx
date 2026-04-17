@@ -6,7 +6,7 @@ export const Panel = ({ children, className = '' }: { children: React.ReactNode;
   </div>
 );
 
-export const PanelHeader = ({ icon: Icon, title, rightText, onTitleChange }: { icon?: any; title: string; rightText?: string; onTitleChange?: (newTitle: string) => void }) => {
+export const PanelHeader = ({ icon: Icon, title, rightText, onTitleChange }: { icon?: any; title: string; rightText?: React.ReactNode; onTitleChange?: (newTitle: string) => void }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
 
@@ -54,7 +54,7 @@ export const PanelHeader = ({ icon: Icon, title, rightText, onTitleChange }: { i
   );
 };
 
-export const StatRow = ({ icon: Icon, label, value, colorClass = "text-[var(--text-primary)]" }: { icon?: any; label: string; value: string | React.ReactNode; colorClass?: string }) => (
+export const StatRow = ({ icon: Icon, label, value, colorClass = "text-[var(--text-primary)]" }: { icon?: any; label: string | React.ReactNode; value: string | React.ReactNode; colorClass?: string }) => (
   <div className="flex items-center justify-between px-1 py-[3px] font-mono text-[12px] leading-none">
     <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
       {Icon && <Icon size={12} />}

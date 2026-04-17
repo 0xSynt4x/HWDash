@@ -8,6 +8,11 @@ export function useWeather() {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
+        if (!('__TAURI_INTERNALS__' in window)) {
+          console.warn('Tauri not detected, using mock weather data');
+          setWeather('☀️|25°C');
+          return;
+        }
         const result = await invoke<string>('get_weather');
         setWeather(result);
       } catch (e) {
