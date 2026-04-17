@@ -88,14 +88,11 @@ export default function App() {
   
   // Tauri OS Window Auto-Resizing
   useEffect(() => {
-    if ('__TAURI_INTERNALS__' in window) {
-      import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
-        const w = isVertical ? 280 : 860;
-        const h = isVertical ? 960 : 480;
-        const currentWindow = getCurrentWindow();
-        currentWindow.setSize(new LogicalSize(w * zoom, h * zoom));
-      }).catch(console.error);
-    }
+    import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
+      const w = isVertical ? 280 : 860;
+      const h = isVertical ? 960 : 480;
+      getCurrentWindow().setSize(new LogicalSize(w * zoom, h * zoom));
+    }).catch(() => {});
   }, [layout, zoom, isVertical]);
 
   return (
