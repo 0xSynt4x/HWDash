@@ -1,4 +1,5 @@
 
+ [english](https://github.com/0xSynt4x/HWDash/blob/main/README-en.md)
 # HWDash
 
 HWDash 是一个基于 Tauri、React 和 Vite 构建的桌面硬件监控面板，面向 AIDA64 传感器面板场景。应用通过读取 AIDA64 写入的系统传感器数据，实时展示 CPU、GPU、内存、网络、功耗、风扇和 FPS 等信息，并提供适合副屏常驻显示的紧凑界面。
