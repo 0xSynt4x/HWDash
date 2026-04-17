@@ -4,7 +4,6 @@ HWDash is a desktop hardware monitoring panel built with Tauri, React, and Vite,
 <img width="260" height="962" alt="image" src="https://github.com/user-attachments/assets/ff9ac4fa-e62c-4f2e-b0e8-bfdc8ba65832" />
 <img width="260" height="966" alt="image" src="https://github.com/user-attachments/assets/e45d570c-adac-42cd-9017-3f54231868bb" />
 <img width="261" height="964" alt="image" src="https://github.com/user-attachments/assets/985783b8-e47d-4f2c-b9f6-add6a70677e9" />
-<img width="256" height="966" alt="image" src="https://github.com/user-attachments/assets/73ece61d-238a-4bbc-a3ec-34299f880fd6" />
 
 ## Features
 
