@@ -1,3 +1,4 @@
+[中文](https://github.com/0xSynt4x/HWDash/blob/main/README.md)  [english](https://github.com/0xSynt4x/HWDash/blob/main/README-en.md)
 # HWDash
 
 HWDash is a desktop hardware monitoring panel built with Tauri, React, and Vite, designed for AIDA64 sensor panel scenarios. The app reads system sensor data written by AIDA64 and displays real-time information including CPU, GPU, memory, network, power consumption, fan speed, and FPS, providing a compact interface suitable for secondary screen display.
