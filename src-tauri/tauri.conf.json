@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "HWDash",
-        "width": 260,
+        "width": 280,
         "height": 960,
         "decorations": false,
         "transparent": true,

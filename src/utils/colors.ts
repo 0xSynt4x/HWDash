@@ -27,9 +27,9 @@ export const getValueColor = (
       break
   }
   if (val < t[0]) return 'text-[var(--text-primary)]'
-  if (val < t[1]) return 'text-[#00cc00]' // Slightly darker green for better contrast in light mode
-  if (val < t[2]) return 'text-[#e68a00]' // Slightly darker orange
-  return 'text-[#e6004c]' // Slightly darker red
+  if (val < t[1]) return 'text-[var(--success)]'
+  if (val < t[2]) return 'text-[var(--warning)]'
+  return 'text-[var(--danger)]'
 }
 
 export const getGlowColor = (val: number, type: 'temp' | 'ram') => {
@@ -42,8 +42,8 @@ export const getGlowColor = (val: number, type: 'temp' | 'ram') => {
       t = [50, 75, 90]
       break
   }
-  if (val < t[0]) return '#00d4ff' // 默认青色
-  if (val < t[1]) return '#00ff00' // 绿色
-  if (val < t[2]) return '#ff9900' // 橙色
-  return '#ff0055' // 红色
+  if (val < t[0]) return 'var(--accent)'
+  if (val < t[1]) return 'var(--success)'
+  if (val < t[2]) return 'var(--warning)'
+  return 'var(--danger)'
 }

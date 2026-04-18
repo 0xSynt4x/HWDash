@@ -4,6 +4,7 @@ import { useAida64 } from './hooks/useAida64';
 import { useWeather } from './hooks/useWeather';
 import { DynamicLineGraph } from './components/UIComponents';
 import { CpuWidget, GpuWidget, RamWidget, NetworkWidget } from './components/Widgets';
+import { Clock, Calendar, Activity, Network } from 'lucide-react';
 
 export default function App() {
   const { aida, time, status, getStr, getNum } = useAida64();
@@ -85,7 +86,7 @@ export default function App() {
   };
 
   const isVertical = layout === 'vertical';
-  
+   
   // Tauri OS Window Auto-Resizing
   useEffect(() => {
     import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
@@ -115,7 +116,7 @@ export default function App() {
           backgroundImage: 'radial-gradient(circle at 20% 30%, var(--bg-gradient-1) 0%, transparent 40%), radial-gradient(circle at 80% 70%, var(--bg-gradient-2) 0%, transparent 40%)'
         }}
       >
-        <div style={{ WebkitAppRegion: 'drag' } as any} className="absolute top-0 left-0 w-full h-8 z-50 cursor-move" title="Scroll to Zoom"></div>
+        <div style={{ WebkitAppRegion: 'drag' } as any} className="absolute top-0 left-0 w-full h-8 z-50 cursor-move"></div>
         
         {/* State Indicator */}
         <div
@@ -131,38 +132,41 @@ export default function App() {
           // ==============================
           // VERTICAL LAYOUT DESIGN
           // ==============================
-          <div className="flex flex-col gap-3 w-full h-full pt-4">
-            <div className="flex flex-row items-center justify-between pb-3 border-b border-[var(--border-color)]/50 mt-2 px-2">
-              <div className="flex flex-col items-start leading-none gap-1">
-                <span className="text-3xl text-[var(--accent)] font-semibold">{weather.split('|')[0]}</span>
-                <span className="text-sm font-light text-[var(--text-secondary)]">{weather.split('|')[1]}</span>
+          <div className="flex flex-col gap-2 w-full h-full pt-3">
+            <div className="flex flex-row items-center justify-between pb-2 border-b border-[var(--border-color)]/50 mt-1 px-1">
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col items-start leading-none gap-1">
+                  <span className="text-4xl text-[var(--accent)] font-semibold">{weather.split('|')[0]}</span>
+                  <span className="text-sm font-light text-[var(--text-secondary)]">{weather.split('|')[1]}</span>
+                </div>
               </div>
               <div className="flex flex-col items-end">
-                <div className="text-5xl tracking-tighter leading-none" style={{ fontFamily: "'Digital-7 Mono', monospace", color: 'var(--text-primary)' }}>
+                <div className="text-4xl tracking-widest leading-none font-bold" style={{ fontFamily: "'Digital-7 Mono', monospace", color: 'var(--text-primary)' }}>
                   {formatTime(time)}
                 </div>
-                <div className="text-xs text-[var(--text-secondary)] uppercase mt-1">
+                <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)] uppercase mt-1">
+                  <Calendar size={10} />
                   {formatDate(time)}
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-col gap-2 w-full">
               <CpuWidget cpuName={cpuName} setCpuName={setCpuName} getNum={getNum} getStr={getStr} />
               <GpuWidget gpuName={gpuName} setGpuName={setGpuName} getNum={getNum} getStr={getStr} />
               <RamWidget getNum={getNum} getStr={getStr} />
               <NetworkWidget networkName={networkName} setNetworkName={setNetworkName} nicIndex={nicIndex} getStr={getStr} getNum={getNum} onContextMenu={handleNetworkRightClick} />
             </div>
 
-            <div className="flex-1 mt-auto border border-[var(--border-color)] rounded-md bg-[rgba(255,255,255,0.02)] flex flex-col p-2 min-h-[140px]">
-              <div className="flex justify-between items-center text-xs font-bold px-1 mb-1 border-b border-[var(--border-color)]/50 pb-1">
+            <div className="flex-1 mt-auto border border-[var(--border-color)] rounded-md bg-[rgba(255,255,255,0.02)] flex flex-col p-2 min-h-[180px]">
+              <div className="flex justify-between items-center text-sm font-bold px-1 mb-1 border-b border-[var(--border-color)]/50 pb-1">
                 <span className="text-[var(--text-secondary)]">UPTIME</span>
                 <span className="text-[var(--accent)]">{getStr('SUPTIME', '00:00:00')}</span>
               </div>
-              <div className="flex justify-between text-[10px] my-1 px-1 opacity-80">
-                <span className="text-[#ff00ff]">CPU: {getStr('PCPUPKG')} W</span>
-                <span className="text-[#00d4ff]">GPU: {getStr('PGPU1')} W</span>
-                <span className="text-[#ffff00]">FPS: {getStr('SRTSSFPS')}</span>
+              <div className="flex justify-between text-[12px] my-1 px-1 opacity-80">
+                <span className="text-[var(--chart-cpu)]">CPU: {getStr('PCPUPKG')} W</span>
+                <span className="text-[var(--chart-gpu)]">GPU: {getStr('PGPU1')} W</span>
+                <span className="text-[var(--chart-fps)]">FPS: {getStr('SRTSSFPS')}</span>
               </div>
               <div className="flex-1 relative w-full h-full mt-1">
                 <DynamicLineGraph cpuPower={getNum('PCPUPKG')} gpuPower={getNum('PGPU1')} fps={getNum('SRTSSFPS')} />
@@ -173,54 +177,65 @@ export default function App() {
           // ==============================
           // HORIZONTAL LAYOUT DESIGN
           // ==============================
-          <div className="grid grid-cols-[250px_1fr] gap-4 w-full pt-4">
+          <div className="flex flex-col gap-3 w-full h-full pt-3 pb-1">
             
-            {/* Left Column: Metrics overview */}
-            <div className="flex flex-col gap-3 h-full">
-              <div className="flex flex-row items-center justify-between pb-3 border-b border-[var(--border-color)]/40 px-1 mt-1">
-                <div className="flex flex-col items-start leading-none gap-1">
-                  <span className="text-3xl text-[var(--accent)] font-semibold">{weather.split('|')[0]}</span>
-                  <span className="text-sm font-light text-[var(--text-secondary)]">{weather.split('|')[1]}</span>
+            {/* 上半部分：左侧信息区 + 右侧硬件区并排 */}
+            <div className="grid grid-cols-[250px_1fr] gap-4 min-h-0 flex-none">
+              
+               {/* Left Column: Metrics overview (增加 justify-between 和 h-full 使其下边缘与右侧强制对齐) */}
+              <div className="flex flex-col justify-between h-full pb-0">
+                
+                {/* 这里的字体、图标和间距已完全和纵向布局保持一致！ */}
+                <div className="flex flex-row items-center justify-between pb-2 border-b border-[var(--border-color)]/40 px-1 mt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-start leading-none gap-1">
+                      <span className="text-4xl text-[var(--accent)] font-semibold">{weather.split('|')[0]}</span>
+                      <span className="text-sm font-light text-[var(--text-secondary)]">{weather.split('|')[1]}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="text-4xl tracking-widest leading-none font-bold" style={{ fontFamily: "'Digital-7 Mono', monospace", color: 'var(--text-primary)' }}>
+                      {formatTime(time)}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)] uppercase mt-1">
+                      <Calendar size={10} />
+                      {formatDate(time)}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end pt-1">
-                  <div className="text-5xl tracking-tighter leading-none" style={{ fontFamily: "'Digital-7 Mono', monospace", color: 'var(--text-primary)' }}>
-                    {formatTime(time)}
-                  </div>
-                  <div className="text-[10px] text-[var(--text-secondary)] uppercase mt-1">
-                    {formatDate(time)}
-                  </div>
+
+                {/* 内存和网络面板靠下排布，确保底边对齐 */}
+                <div className="flex flex-col gap-2 w-full mt-auto pt-2">
+                  <RamWidget getNum={getNum} getStr={getStr} />
+                  <NetworkWidget networkName={networkName} setNetworkName={setNetworkName} nicIndex={nicIndex} getStr={getStr} getNum={getNum} onContextMenu={handleNetworkRightClick} />
                 </div>
               </div>
-
-              <div className="flex flex-col gap-3 flex-1 mt-1">
-                <RamWidget getNum={getNum} getStr={getStr} />
-                <NetworkWidget networkName={networkName} setNetworkName={setNetworkName} nicIndex={nicIndex} getStr={getStr} getNum={getNum} onContextMenu={handleNetworkRightClick} />
-              </div>
-            </div>
-
-            {/* Right Column: Hardware Details & Uptime */}
-            <div className="flex flex-col gap-4 h-full">
-              <div className="grid grid-cols-2 gap-3 pb-1">
+              {/* Right Column: Hardware Details (CPU / GPU 并排) */}
+              <div className="grid grid-cols-2 gap-4 h-full">
                 <CpuWidget cpuName={cpuName} setCpuName={setCpuName} getNum={getNum} getStr={getStr} />
                 <GpuWidget gpuName={gpuName} setGpuName={setGpuName} getNum={getNum} getStr={getStr} />
               </div>
               
-              <div className="flex-1 mt-auto border border-[var(--border-color)] min-h-[140px] rounded-md bg-[rgba(255,255,255,0.02)] flex flex-col p-2">
-                <div className="flex justify-between items-center text-xs font-bold px-1 mb-1 border-b border-[var(--border-color)]/50 pb-1">
-                  <span className="text-[var(--text-secondary)]">UPTIME</span>
-                  <span className="text-[var(--accent)]">{getStr('SUPTIME', '00:00:00')}</span>
-                </div>
-                <div className="flex justify-around text-[10px] my-1 px-1 opacity-80">
-                  <span className="text-[#ff00ff]">CPU: {getStr('PCPUPKG')} W</span>
-                  <span className="text-[#00d4ff]">GPU: {getStr('PGPU1')} W</span>
-                  <span className="text-[#ffff00]">FPS: {getStr('SRTSSFPS')}</span>
-                </div>
-                <div className="flex-1 relative w-full mt-1">
-                  <DynamicLineGraph cpuPower={getNum('PCPUPKG')} gpuPower={getNum('PGPU1')} fps={getNum('SRTSSFPS')} />
-                </div>
+            </div>
+
+            {/* 下半部分：Uptime/折线图 变为 100% 宽度，垫在最下方 */}
+            <div className="flex-1 border border-[var(--border-color)] rounded-md bg-[rgba(255,255,255,0.02)] flex flex-col p-2 w-full">
+              {/* UPTIME 标题行：字体恢复为 text-sm */}
+              <div className="flex justify-between items-center text-sm font-bold px-1 mb-1 border-b border-[var(--border-color)]/50 pb-1">
+                <span className="text-[var(--text-secondary)]">UPTIME</span>
+                <span className="text-[var(--accent)]">{getStr('SUPTIME', '00:00:00')}</span>
+              </div>
+              {/* 性能数据行：字体恢复为 text-[12px] 并调整了上下间距，使用了 justify-around 让三个数据在宽屏下分布更均匀 */}
+              <div className="flex justify-around text-[12px] my-1 px-1 opacity-80">
+                <span className="text-[var(--chart-cpu)]">CPU: {getStr('PCPUPKG')} W</span>
+                <span className="text-[var(--chart-gpu)]">GPU: {getStr('PGPU1')} W</span>
+                <span className="text-[var(--chart-fps)]">FPS: {getStr('SRTSSFPS')}</span>
+              </div>
+              <div className="flex-1 relative w-full h-full mt-1">
+                <DynamicLineGraph cpuPower={getNum('PCPUPKG')} gpuPower={getNum('PGPU1')} fps={getNum('SRTSSFPS')} />
               </div>
             </div>
-            
+
           </div>
         )}
 
@@ -242,7 +257,7 @@ export default function App() {
       {/* 网卡选择右键菜单 */}
       {showNicMenu && (
         <div
-          className="fixed z-[100] bg-[var(--bg-panel)] border border-[var(--accent)] rounded shadow-lg py-1 font-mono text-[10px] backdrop-blur-md"
+          className="fixed z-[100] bg-[var(--bg-panel)] border border-[var(--accent)] rounded shadow-lg py-1 font-mono text-[12px] backdrop-blur-md"
           style={{ top: menuPos.y, left: menuPos.x }}
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.stopPropagation()}

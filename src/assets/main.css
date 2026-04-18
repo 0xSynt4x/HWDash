@@ -1,51 +1,198 @@
 @import "tailwindcss";
 
+/* ==============================================
+   HWDash Theme System
+   4 Themes: Dark (Default), Light, Tesla, Ferrari
+   ============================================== */
+
+/* ---------- Dark Theme (Default) ---------- */
 :root {
-  --bg-main: rgba(15, 17, 21, 0.9);
-  --bg-panel: rgba(25, 27, 33, 0.7);
-  --text-primary: #ffffff;
-  --text-secondary: #979ca5;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --accent: #00d4ff;
-  --bg-gradient-1: rgba(0, 212, 255, 0.05);
-  --bg-gradient-2: rgba(255, 0, 128, 0.03);
-}
-
-.theme-light {
-  --bg-main: rgba(240, 240, 245, 0.9);
-  --bg-panel: rgba(255, 255, 255, 0.7);
-  --text-primary: #1a1a24;
-  --text-secondary: #6b7280;
-  --border-color: rgba(0, 0, 0, 0.1);
-  --accent: #0088ff;
-  --bg-gradient-1: rgba(0, 136, 255, 0.05);
-  --bg-gradient-2: rgba(255, 0, 128, 0.03);
-}
-
-.theme-tesla {
-  --bg-main: rgba(17, 17, 17, 0.95);
-  --bg-panel: rgba(34, 34, 34, 0.6);
-  --text-primary: #ffffff;
-  --text-secondary: #a2a2a2;
+  /* Core Colors */
+  --bg-main: #0f1115;
+  --bg-panel: rgba(22, 25, 30, 0.85);
+  --text-primary: #f0f0f5;
+  --text-secondary: #8a919c;
+  --text-muted: #5a6270;
   --border-color: rgba(255, 255, 255, 0.08);
-  --accent: #e82127;
-  --bg-gradient-1: rgba(232, 33, 39, 0.03);
-  --bg-gradient-2: rgba(0, 0, 0, 0.05);
+  --border-hover: rgba(255, 255, 255, 0.15);
+
+  /* Accent Colors */
+  --accent: #00d4ff;
+  --accent-secondary: #00ff88;
+  --accent-tertiary: #ff6b35;
+  --accent-glow: rgba(0, 212, 255, 0.4);
+
+  /* Background Gradients */
+  --bg-gradient-1: rgba(0, 212, 255, 0.06);
+  --bg-gradient-2: rgba(255, 0, 128, 0.04);
+  --bg-gradient-3: rgba(0, 255, 136, 0.03);
+
+  /* Status Colors */
+  --success: #00d491;
+  --warning: #ffb347;
+  --danger: #ff4d6a;
+  --info: #5c7cfa;
+
+  /* Chart Colors */
+  --chart-cpu: #ff00ff;
+  --chart-gpu: #00d4ff;
+  --chart-fps: #ffff00;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px var(--accent-glow);
+
+  /* Glass Effect */
+  --glass-bg: rgba(25, 28, 35, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(16px);
+
+  /* Spacing */
+  --panel-padding: 14px;
+  --gap-sm: 8px;
+  --gap-md: 12px;
+  --gap-lg: 16px;
 }
 
+/* ---------- Light Theme ---------- */
+.theme-light {
+  --bg-main: #f5f6f8;
+  --bg-panel: rgba(255, 255, 255, 0.95);
+  --text-primary: #1a1d24;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.15);
+
+  --accent: #0088ff;
+  --accent-secondary: #00c853;
+  --accent-tertiary: #ff6d00;
+  --accent-glow: rgba(0, 136, 255, 0.25);
+
+  --bg-gradient-1: rgba(0, 136, 255, 0.06);
+  --bg-gradient-2: rgba(255, 107, 53, 0.04);
+  --bg-gradient-3: rgba(0, 200, 83, 0.03);
+
+  --success: #00c853;
+  --warning: #ff9100;
+  --danger: #ff1744;
+  --info: #2979ff;
+
+  --chart-cpu: #d500f9;
+  --chart-gpu: #00b0ff;
+  --chart-fps: #ffd600;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px var(--accent-glow);
+
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- Tesla Theme ---------- */
+.theme-tesla {
+  --bg-main: #121212;
+  --bg-panel: rgba(28, 28, 30, 0.9);
+  --text-primary: #ffffff;
+  --text-secondary: #a5a5a5;
+  --text-muted: #6e6e73;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+
+  --accent: #e82127;
+  --accent-secondary: #34c759;
+  --accent-tertiary: #ff9500;
+  --accent-glow: rgba(232, 33, 39, 0.35);
+
+  --bg-gradient-1: rgba(232, 33, 39, 0.05);
+  --bg-gradient-2: rgba(0, 0, 0, 0.08);
+  --bg-gradient-3: rgba(52, 199, 89, 0.03);
+
+  --success: #34c759;
+  --warning: #ff9500;
+  --danger: #ff3b30;
+  --info: #007aff;
+
+  --chart-cpu: #ff3b30;
+  --chart-gpu: #e82127;
+  --chart-fps: #34c759;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 25px var(--accent-glow);
+
+  --glass-bg: rgba(35, 35, 38, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- Ferrari Theme ---------- */
 .theme-ferrari {
-  --bg-main: rgba(250, 250, 250, 0.95);
-  --bg-panel: rgba(255, 255, 255, 0.8);
-  --text-primary: #111111;
+  --bg-main: #fafafa;
+  --bg-panel: rgba(255, 255, 255, 0.92);
+  --text-primary: #0c0c0c;
   --text-secondary: #666666;
-  --border-color: rgba(0, 0, 0, 0.1);
+  --text-muted: #999999;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(239, 26, 45, 0.3);
+
   --accent: #ef1a2d;
-  --bg-gradient-1: rgba(239, 26, 45, 0.05);
-  --bg-gradient-2: rgba(255, 242, 0, 0.03);
+  --accent-secondary: #000000;
+  --accent-tertiary: #ffd700;
+  --accent-glow: rgba(239, 26, 45, 0.25);
+
+  --bg-gradient-1: rgba(239, 26, 45, 0.06);
+  --bg-gradient-2: rgba(255, 242, 0, 0.05);
+  --bg-gradient-3: rgba(0, 0, 0, 0.02);
+
+  --success: #00a650;
+  --warning: #ff8c00;
+  --danger: #ef1a2d;
+  --info: #1e88e5;
+
+  --chart-cpu: #ef1a2d;
+  --chart-gpu: #000000;
+  --chart-fps: #ffd700;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.18);
+  --shadow-glow: 0 0 20px var(--accent-glow);
+
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(239, 26, 45, 0.15);
 }
 
 body {
   background-color: transparent !important;
   margin: 0;
   overflow: hidden;
+}
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }

@@ -33,34 +33,38 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       </div>
 
       {/* Theme Selection */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">Theme</span>
-        <div className="flex flex-col gap-1 text-[12px]">
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="radio" checked={theme === 'dark'} onChange={() => setTheme('dark')} /> Dark
-          </label>
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="radio" checked={theme === 'light'} onChange={() => setTheme('light')} /> Light
-          </label>
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="radio" checked={theme === 'tesla'} onChange={() => setTheme('tesla')} /> Tesla
-          </label>
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="radio" checked={theme === 'ferrari'} onChange={() => setTheme('ferrari')} /> Ferrari
-          </label>
+        <div className="grid grid-cols-4 gap-2">
+          <button onClick={() => setTheme('dark')} className={`p-1.5 rounded border-2 transition-all ${theme === 'dark' ? 'border-[var(--accent)]' : 'border-[var(--border-color)]'}`}>
+            <div className="h-6 rounded bg-gradient-to-br from-[#0f1115] to-[#1a1d24]" />
+            <div className="text-[8px] text-center mt-1">Dark</div>
+          </button>
+          <button onClick={() => setTheme('light')} className={`p-1.5 rounded border-2 transition-all ${theme === 'light' ? 'border-[var(--accent)]' : 'border-[var(--border-color)]'}`}>
+            <div className="h-6 rounded bg-gradient-to-br from-[#f5f6f8] to-[#ffffff]" />
+            <div className="text-[8px] text-center mt-1">Light</div>
+          </button>
+          <button onClick={() => setTheme('tesla')} className={`p-1.5 rounded border-2 transition-all ${theme === 'tesla' ? 'border-[var(--accent)]' : 'border-[var(--border-color)]'}`}>
+            <div className="h-6 rounded bg-gradient-to-br from-[#121212] to-[#1c1c1e]" />
+            <div className="text-[8px] text-center mt-1">Tesla</div>
+          </button>
+          <button onClick={() => setTheme('ferrari')} className={`p-1.5 rounded border-2 transition-all ${theme === 'ferrari' ? 'border-[var(--accent)]' : 'border-[var(--border-color)]'}`}>
+            <div className="h-6 rounded bg-gradient-to-br from-[#fafafa] to-[#ffffff]" />
+            <div className="text-[8px] text-center mt-1">Ferrari</div>
+          </button>
         </div>
       </div>
 
       {/* Layout Selection */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">Layout</span>
-        <div className="flex gap-2 text-[12px]">
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="radio" checked={layout === 'vertical'} onChange={() => setLayout('vertical')} /> Vertical
-          </label>
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="radio" checked={layout === 'horizontal'} onChange={() => setLayout('horizontal')} /> Horizontal
-          </label>
+        <div className="flex gap-2">
+          <button onClick={() => setLayout('vertical')} className={`flex-1 py-2 rounded-lg border-2 transition-all text-[12px] ${layout === 'vertical' ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border-color)]'}`}>
+            Vertical
+          </button>
+          <button onClick={() => setLayout('horizontal')} className={`flex-1 py-2 rounded-lg border-2 transition-all text-[12px] ${layout === 'horizontal' ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border-color)]'}`}>
+            Horizontal
+          </button>
         </div>
       </div>
     </div>
