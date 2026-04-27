@@ -1,6 +1,35 @@
 @import "tailwindcss";
 
 /* ==============================================
+   HWDash Fonts
+   ============================================== */
+
+@font-face {
+  font-family: 'Digital-7 Mono';
+  src: url('./fonts/digital-7-mono.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/**
+ * 7 段数码管字体工具类 — 仅适合纯数字 / 数字 + 少量符号(. : - / )。
+ * Digital-7 字体不包含完整字母字形,所以单位(°C、V、W)、标签(CPU、CHIP)
+ * 必须保留默认 monospace,不要加 .font-digital。
+ *
+ * 放进 @layer components 是为了让 Tailwind utilities(text-*, tracking-*)能覆盖此类的属性。
+ * letter-spacing 默认 0.06em 让 7 段数码管字符不至于过密,各处可用 tracking-* 覆盖。
+ */
+@layer components {
+  .font-digital {
+    font-family: 'Digital-7 Mono', 'JetBrains Mono', 'Consolas', monospace;
+    font-feature-settings: 'tnum' 1;
+    /* 0.07em ≈ 0.84px @ 12px / 2.5px @ 36px;小字号位置可叠加 tracking-wider 进一步拉开 */
+    letter-spacing: 0.07em;
+  }
+}
+
+/* ==============================================
    HWDash Theme System
    4 Themes: Dark (Default), Light, Tesla, Ferrari
    ============================================== */
@@ -167,10 +196,29 @@
   --glass-border: rgba(239, 26, 45, 0.15);
 }
 
+/* ==============================================
+   Base
+   ============================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   background-color: transparent !important;
   margin: 0;
+  padding: 0;
   overflow: hidden;
+}
+
+::selection {
+  background: var(--accent);
+  color: white;
 }
 
 /* Smooth theme transitions */
@@ -195,4 +243,49 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* ==============================================
+   Animations
+   ============================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s ease-out forwards;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+/* ==============================================
+   Reduced Motion
+   ============================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -5,4 +5,10 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
+*.tsbuildinfo
+*.zip
+src-tauri/target/
+# 便携模式运行时设置文件(与 exe 同目录)
+settings.json
+# AIDA64 注册表 dump(含本机隐私指纹,仅供本地调试)
+*.reg

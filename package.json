@@ -8,8 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "prebuild": "node -e \"const fs=require('fs');const p='src-tauri\\\\target\\\\release\\\\build';if(fs.existsSync(p)){fs.rmSync(p,{recursive:true,force:true});console.log('Cleaned build cache')}\"",
-    "predev": "node -e \"const fs=require('fs');const p='src-tauri\\\\target\\\\debug\\\\build';if(fs.existsSync(p)){fs.rmSync(p,{recursive:true,force:true});console.log('Cleaned dev cache')}\""
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -25,10 +24,6 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.6.0",
-    "jimp": "^1.6.1",
-    "png-to-ico": "^3.0.1",
-    "sharp": "^0.34.5",
-    "to-ico": "^1.1.5",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   }
