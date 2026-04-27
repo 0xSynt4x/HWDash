@@ -1,6 +1,6 @@
 [package]
 name = "hwdash"
-version = "0.1.0"
+version = "0.2.0"
 description = "Hardware Dashboard - AIDA64 Monitor"
 authors = ["Dylan"]
 edition = "2021"

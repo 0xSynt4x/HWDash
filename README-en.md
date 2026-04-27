@@ -12,10 +12,13 @@ HWDash is a desktop hardware monitoring panel built with Tauri, React, and Vite,
 - Real-time reading of AIDA64 hardware data with status refresh
 - Core monitoring modules: CPU, GPU, RAM, network, etc.
 - Built-in power consumption and FPS dynamic charts
+- Global 7-segment digital font (Digital-7 Mono) for crisp numeric readings
 - Four themes: Dark, Light, Tesla, Ferrari
-- Portrait and landscape layout support
-- Persists theme, layout, hardware names, and network adapter selection locally
-- Integrated weather and time display, ideal for desktop monitoring
+- Portrait and landscape layouts, mouse-wheel zoom (0.3×–3×)
+- Portable settings: stored as `settings.json` next to the exe; copy the folder to a USB stick and run anywhere
+- System tray: left-click to summon the window, right-click for show/quit menu
+- Integrated weather and time display via open-meteo public API (60-second backend cache)
+- Transparent borderless window, ideal as a secondary-monitor overlay
 
 ## Tech Stack
 
@@ -68,22 +71,42 @@ If AIDA64 is not outputting data properly, the interface will show a waiting for
 ```text
 src/
   components/    React UI components and monitoring cards
-  hooks/         AIDA64 and weather data reading logic
+  hooks/         AIDA64, weather, and settings hooks
   utils/         Color and display helper utilities
+  assets/
+    fonts/       Digital-7 Mono 7-segment font
+    main.css     Global styles + theme variables + Tailwind
 src-tauri/
-  Cargo.toml     Rust-side dependencies and project config
+  src/
+    lib.rs       Tauri entry, tray, registry reader, weather endpoint
+    settings.rs  Portable settings.json read/write
+  capabilities/  Tauri v2 permission declarations
+  tauri.conf.json  App config (with CSP)
+  Cargo.toml     Rust dependencies
 ```
 
 ## Configurable Options
 
-The app supports the following runtime configurations:
+The app supports the following runtime configurations (right-click anywhere on the panel to open Settings):
 
-- Theme switching
-- Layout switching
-- CPU / GPU / Network name customization
-- Network adapter selection
+- Theme switching (Dark / Light / Tesla / Ferrari)
+- Layout switching (Vertical / Horizontal)
+- CPU / GPU / Network name customization (click card title to edit inline)
+- Network adapter selection (right-click NETWORK card)
+- Global zoom (mouse wheel or Settings slider, 0.3×–3×)
+- Location (preset cities or custom lat/lon for weather)
 
-Settings are saved in local browser storage and automatically restored on next launch.
+Settings are persisted as `settings.json` next to the exe (portable mode).
+You can copy the entire folder anywhere and your config follows.
+If the exe directory is read-only, it falls back to `%APPDATA%\com.dylan.hwdash\settings.json`.
+
+## Data & Privacy
+
+- Registry read-only: only reads `HKCU\Software\FinalWire\AIDA64\SensorValues`, never writes
+- Weather: default coordinates are `0,0` (placeholder); the app does **not** make any network request on first launch until you pick a city
+- Weather service: [open-meteo.com](https://open-meteo.com) — free, no API key, no account required
+- Strict CSP: `default-src 'self'`, no external scripts/connections allowed in the frontend
+- All settings stored locally; no telemetry, no upload
 
 ## Use Cases
 
