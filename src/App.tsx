@@ -163,14 +163,14 @@ export default function App() {
 
           {isVertical ? (
             // ============ 纵向布局 ============
-            <div className="flex flex-col gap-2 w-full h-full pt-3">
+            <div className="flex flex-col gap-2 w-full h-full pt-2">
               <div className="flex flex-row items-center justify-between pb-2 border-b border-[var(--border-color)]/50 mt-1 px-1">
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col items-start leading-none gap-1">
                     <span className="text-4xl text-[var(--accent)] font-semibold">
                       {weather.split('|')[0]}
                     </span>
-                    <span className="text-sm font-light text-[var(--text-secondary)]">
+                    <span className="text-lg font-light text-[var(--text-secondary)]">
                       {weather.split('|')[1]}
                     </span>
                   </div>
@@ -179,8 +179,8 @@ export default function App() {
                   <div className="font-digital text-4xl tracking-widest leading-none font-bold text-[var(--text-primary)]">
                     {formatTime(time)}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)] uppercase mt-1">
-                    <Calendar size={10} />
+                  <div className="flex items-center gap-1 text-base text-[var(--text-secondary)] uppercase mt-1">
+                    <Calendar size={12} />
                     {formatDate(time)}
                   </div>
                 </div>
@@ -215,7 +215,7 @@ export default function App() {
                   <span className="text-[var(--text-secondary)]">UPTIME</span>
                   <span className="font-digital text-[var(--accent)] tracking-wider">{getStr('SUPTIME', '00:00:00')}</span>
                 </div>
-                <div className="flex justify-between text-[12px] my-1 px-1 opacity-80">
+                <div className="flex justify-between text-[13px] my-1 px-1 opacity-80">
                   <span className="text-[var(--chart-cpu)]">CPU:&nbsp;<span className="font-digital">{getStr('PCPUPKG')}</span>&nbsp;W</span>
                   <span className="text-[var(--chart-gpu)]">GPU:&nbsp;<span className="font-digital">{getStr('PGPU1')}</span>&nbsp;W</span>
                   <span className="text-[var(--chart-fps)]">FPS:&nbsp;<span className="font-digital">{getStr('SRTSSFPS')}</span></span>
@@ -231,7 +231,7 @@ export default function App() {
             </div>
           ) : (
             // ============ 横向布局 ============
-            <div className="flex flex-col gap-3 w-full h-full pt-3 pb-1">
+            <div className="flex flex-col gap-3 w-full h-full pt-2 pb-1">
               <div className="grid grid-cols-[250px_1fr] gap-4 min-h-0 flex-none">
                 <div className="flex flex-col justify-between h-full pb-0">
                   <div className="flex flex-row items-center justify-between pb-2 border-b border-[var(--border-color)]/40 px-1 mt-1">
@@ -240,7 +240,7 @@ export default function App() {
                         <span className="text-4xl text-[var(--accent)] font-semibold">
                           {weather.split('|')[0]}
                         </span>
-                        <span className="text-sm font-light text-[var(--text-secondary)]">
+                        <span className="text-lg font-light text-[var(--text-secondary)]">
                           {weather.split('|')[1]}
                         </span>
                       </div>
@@ -249,8 +249,8 @@ export default function App() {
                       <div className="font-digital text-4xl tracking-widest leading-none font-bold text-[var(--text-primary)]">
                         {formatTime(time)}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)] uppercase mt-1">
-                        <Calendar size={10} />
+                      <div className="flex items-center gap-1 text-base text-[var(--text-secondary)] uppercase mt-1">
+                        <Calendar size={12} />
                         {formatDate(time)}
                       </div>
                     </div>
@@ -290,7 +290,7 @@ export default function App() {
                   <span className="text-[var(--text-secondary)]">UPTIME</span>
                   <span className="font-digital text-[var(--accent)] tracking-wider">{getStr('SUPTIME', '00:00:00')}</span>
                 </div>
-                <div className="flex justify-around text-[12px] my-1 px-1 opacity-80">
+                <div className="flex justify-around text-[13px] my-1 px-1 opacity-80">
                   <span className="text-[var(--chart-cpu)]">CPU:&nbsp;<span className="font-digital">{getStr('PCPUPKG')}</span>&nbsp;W</span>
                   <span className="text-[var(--chart-gpu)]">GPU:&nbsp;<span className="font-digital">{getStr('PGPU1')}</span>&nbsp;W</span>
                   <span className="text-[var(--chart-fps)]">FPS:&nbsp;<span className="font-digital">{getStr('SRTSSFPS')}</span></span>
@@ -322,7 +322,7 @@ export default function App() {
       {/* 网卡选择右键菜单 */}
       {showNicMenu && (
         <div
-          className="fixed z-[100] bg-[var(--bg-panel)] border border-[var(--accent)] rounded shadow-lg py-1 font-mono text-[12px] backdrop-blur-md"
+          className="fixed z-[100] bg-[var(--bg-panel)] border border-[var(--accent)] rounded shadow-lg py-1 font-mono text-[13px] backdrop-blur-md"
           style={{ top: menuPos.y, left: menuPos.x }}
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.stopPropagation()}

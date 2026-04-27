@@ -50,8 +50,8 @@ interface NetworkWidgetProps {
 export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNum, getStr }) => (
   <Panel className="min-w-[240px] h-full flex flex-col">
     <PanelHeader icon={Cpu} title={cpuName} onTitleChange={setCpuName} />
-    <div className="p-1 flex flex-col flex-1">
-      <div className="flex justify-between items-start mb-2 px-1">
+    <div className="p-0.5 flex flex-col flex-1">
+      <div className="flex justify-between items-start mb-1 px-1">
         <div className="flex items-center gap-2">
           <div className="w-4 h-8 border border-[var(--border-color)] rounded-sm flex flex-col justify-end p-[1px] bg-[rgba(255,255,255,0.05)]">
             <div
@@ -66,12 +66,12 @@ export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNu
           <div className={`font-digital text-4xl font-light leading-none ${getValueColor(getNum('TCPU'), 'temp')}`}>
             {getStr('TCPU')}
           </div>
-          <div className="flex flex-col text-[12px] leading-none justify-center font-mono">
+          <div className="flex flex-col text-[13px] leading-none justify-center font-mono">
             <span className="opacity-50">°C</span>
             <span className={getNum('TCPU') >= 85 ? 'text-[#ff0055] animate-pulse' : 'opacity-0'}>⚠</span>
           </div>
         </div>
-        <div className="flex flex-col text-right text-[12px] font-mono leading-tight mt-1 text-[var(--text-secondary)] tracking-tight">
+        <div className="flex flex-col text-right text-[13px] font-mono leading-tight mt-1 text-[var(--text-secondary)] tracking-tight">
           <div>
             <span className="opacity-50">CHIP:</span>{' '}
             <span className={`font-digital ${getValueColor(getNum('TCHIP'), 'temp')}`}>{getStr('TCHIP', '--')}</span>
@@ -89,7 +89,7 @@ export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNu
         label="VOLTAGE:"
         value={
           <div>
-            <span className="font-digital">{getStr('VCPU')}</span> <span className="text-[12px] opacity-50">V</span>
+            <span className="font-digital">{getStr('VCPU')}</span> <span className="text-[13px] opacity-50">V</span>
           </div>
         }
         colorClass={getValueColor(getNum('VCPU'), 'voltage_cpu')}
@@ -99,7 +99,7 @@ export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNu
         label="POWER:"
         value={
           <div>
-            <span className="font-digital">{getStr('PCPUPKG')}</span> <span className="text-[12px] opacity-50">W</span>
+            <span className="font-digital">{getStr('PCPUPKG')}</span> <span className="text-[13px] opacity-50">W</span>
           </div>
         }
       />
@@ -108,7 +108,7 @@ export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNu
         label="CLOCK:"
         value={
           <div>
-            <span className="font-digital">{getStr('SCPUCLK')}</span> <span className="text-[12px] opacity-50">MHZ</span>
+            <span className="font-digital">{getStr('SCPUCLK')}</span> <span className="text-[13px] opacity-50">MHZ</span>
           </div>
         }
       />
@@ -117,7 +117,7 @@ export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNu
         label="LOAD:"
         value={
           <div>
-            <span className="font-digital">{getStr('SCPUUTI')}</span> <span className="text-[12px] opacity-50">%</span>
+            <span className="font-digital">{getStr('SCPUUTI')}</span> <span className="text-[13px] opacity-50">%</span>
           </div>
         }
         colorClass={getValueColor(getNum('SCPUUTI'), 'load')}
@@ -128,9 +128,9 @@ export const CpuWidget: React.FC<CpuWidgetProps> = ({ cpuName, setCpuName, getNu
         value={
           <div className="flex gap-1 items-baseline">
             <span className="font-digital">{getStr('FCPU')}</span>
-            <span className="opacity-50 text-[12px]">/</span>
+            <span className="opacity-50 text-[13px]">/</span>
             <span className="font-digital">{getStr('FCHA1')}</span>
-            <span className="text-[12px] opacity-50">RPM</span>
+            <span className="text-[13px] opacity-50">RPM</span>
           </div>
         }
         colorClass={getValueColor(getNum('FCPU'), 'fan')}
@@ -156,8 +156,8 @@ export const GpuWidget: React.FC<GpuWidgetProps> = ({ gpuName, setGpuName, getNu
   return (
     <Panel className="min-w-[240px] h-full flex flex-col">
       <PanelHeader icon={HardDrive} title={gpuName} onTitleChange={setGpuName} />
-      <div className="p-1 flex flex-col flex-1">
-        <div className="flex justify-between items-start mb-2 px-1">
+      <div className="p-0.5 flex flex-col flex-1">
+        <div className="flex justify-between items-start mb-1 px-1">
           <div className="flex items-center gap-1">
             <div className="w-4 h-8 border border-[var(--border-color)] rounded-sm flex flex-col justify-end p-[1px] bg-[rgba(255,255,255,0.05)]">
               <div
@@ -173,21 +173,21 @@ export const GpuWidget: React.FC<GpuWidgetProps> = ({ gpuName, setGpuName, getNu
               <div className={`font-digital text-4xl font-light leading-none ${getValueColor(getNum('TGPU1'), 'temp')}`}>
                 {getStr('TGPU1')}
               </div>
-              <div className="flex flex-col text-[12px] leading-none justify-center ml-1 font-mono">
+              <div className="flex flex-col text-[13px] leading-none justify-center ml-1 font-mono">
                 <span className="opacity-50">°C</span>
               </div>
             </div>
             <div className="flex items-start ml-2 relative" title="VRAM Temp">
-              <div className="absolute -top-3 left-0 text-[8px] text-[var(--accent)] opacity-60">MEM</div>
+              <div className="absolute -top-3 left-0 text-[9px] text-[var(--accent)] opacity-60">MEM</div>
               <div className={`font-digital text-2xl font-light leading-none ${getValueColor(getNum('TGPU1MEM'), 'temp')}`}>
                 {getStr('TGPU1MEM')}
               </div>
-              <div className="flex flex-col text-[12px] leading-none justify-center ml-1 font-mono">
+              <div className="flex flex-col text-[13px] leading-none justify-center ml-1 font-mono">
                 <span className="opacity-50">°C</span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col text-right text-[12px] font-mono leading-tight mt-1 text-[var(--text-secondary)] tracking-tight">
+          <div className="flex flex-col text-right text-[13px] font-mono leading-tight mt-1 text-[var(--text-secondary)] tracking-tight">
             <div>
               <span className="opacity-50">FAN1:</span>{' '}
               <span className={`font-digital ${getValueColor(getNum('DGPU1'), 'fan_percent')}`}>{getStr('DGPU1', '0')}</span>
@@ -206,7 +206,7 @@ export const GpuWidget: React.FC<GpuWidgetProps> = ({ gpuName, setGpuName, getNu
           label="VOLTAGE:"
           value={
             <div>
-              <span className="font-digital">{getStr('VGPU1')}</span> <span className="text-[12px] opacity-50">V</span>
+              <span className="font-digital">{getStr('VGPU1')}</span> <span className="text-[13px] opacity-50">V</span>
             </div>
           }
           colorClass={getValueColor(getNum('VGPU1'), 'voltage_gpu')}
@@ -216,8 +216,8 @@ export const GpuWidget: React.FC<GpuWidgetProps> = ({ gpuName, setGpuName, getNu
           label="POWER:"
           value={
             <div className="flex gap-1 items-baseline">
-              <span className="font-digital">{getStr('PGPU1')}</span> <span className="text-[12px] opacity-50">W</span>{' '}
-              <span className="opacity-50 font-normal text-[12px]">[<span className="font-digital">{getStr('PGPU1TDPP')}</span>%]</span>
+              <span className="font-digital">{getStr('PGPU1')}</span> <span className="text-[13px] opacity-50">W</span>{' '}
+              <span className="opacity-50 font-normal text-[13px]">[<span className="font-digital">{getStr('PGPU1TDPP')}</span>%]</span>
             </div>
           }
         />
@@ -227,9 +227,9 @@ export const GpuWidget: React.FC<GpuWidgetProps> = ({ gpuName, setGpuName, getNu
           value={
             <div className="flex gap-1 items-baseline">
               <span className="font-digital">{getStr('SGPU1CLK')}</span>
-              <span className="opacity-50 text-[12px]">/</span>
+              <span className="opacity-50 text-[13px]">/</span>
               <span className="font-digital">{getStr('SGPU1MEMCLK')}</span>
-              <span className="text-[12px] opacity-50">MHZ</span>
+              <span className="text-[13px] opacity-50">MHZ</span>
             </div>
           }
         />
@@ -238,7 +238,7 @@ export const GpuWidget: React.FC<GpuWidgetProps> = ({ gpuName, setGpuName, getNu
           label="VRAM:"
           value={
             <div>
-              <span className="font-digital">{getStr('SUSEDVMEM')}</span> <span className="text-[12px] opacity-50">MB</span>
+              <span className="font-digital">{getStr('SUSEDVMEM')}</span> <span className="text-[13px] opacity-50">MB</span>
             </div>
           }
           colorClass={getValueColor(vmemPct, 'ram')}
@@ -258,7 +258,7 @@ export const RamWidget: React.FC<RamWidgetProps> = ({ getNum, getStr }) => {
   const usagePercent = (memUsed / memTotal) * 100;
 
   return (
-    <Panel className="min-w-[240px] relative overflow-hidden flex-shrink-0">
+    <Panel className="min-w-[240px] relative overflow-hidden flex-shrink-0 !p-1">
       <div
         className="absolute top-0 left-0 h-full transition-all duration-700 ease-out z-0"
         style={{
@@ -268,15 +268,15 @@ export const RamWidget: React.FC<RamWidgetProps> = ({ getNum, getStr }) => {
         }}
       />
 
-      <div className="relative z-10 flex items-center justify-between font-mono text-[14px] uppercase tracking-[2px] text-[var(--accent)] px-2 py-1.5 w-full h-full min-h-[36px]">
+      <div className="relative z-10 flex items-center justify-between font-mono text-[15px] uppercase tracking-[2px] text-[var(--accent)] px-2 py-1 w-full leading-none">
         <div className="flex items-center gap-2 flex-1">
           <MemoryStick size={14} strokeWidth={2} className="opacity-80" />
-          <span className="font-semibold leading-none mt-0.5">MEMORY</span>
+          <span className="font-semibold leading-none">MEMORY</span>
         </div>
-        <div className="ml-2 text-[12px] flex items-baseline gap-1">
+        <div className="ml-2 text-[13px] flex items-baseline gap-1">
           <span className="font-digital text-[var(--accent)] leading-none">{getStr('SUSEDMEM')}</span>
-          <span className="opacity-50 text-[10px] leading-none">/</span>
-          <span className="font-digital opacity-70 text-[11px] leading-none">{memTotal}</span>
+          <span className="opacity-50 text-[11px] leading-none">/</span>
+          <span className="font-digital opacity-70 text-[12px] leading-none">{memTotal}</span>
         </div>
       </div>
     </Panel>
@@ -309,7 +309,7 @@ export const NetworkWidget: React.FC<NetworkWidgetProps> = ({
               <span className={hasNic ? 'font-digital text-sm' : 'font-mono text-sm'}>
                 {hasNic ? getStr(`SNIC${nicIndex}TOTDL`, '0') : '—'}
               </span>
-              <span className="text-[12px] opacity-50">MB</span>
+              <span className="text-[13px] opacity-50">MB</span>
             </div>
           }
         />
@@ -329,7 +329,7 @@ export const NetworkWidget: React.FC<NetworkWidgetProps> = ({
               <span className={hasNic ? 'font-digital text-xs' : 'font-mono text-xs'}>
                 {hasNic ? getStr(`SNIC${nicIndex}DLRATE`, '0') : '—'}
               </span>
-              <span className="text-[8px] text-[var(--text-muted)]">↓</span>
+              <span className="text-[9px] text-[var(--text-muted)]">↓</span>
             </div>
             <div
               className={`flex-1 flex items-center gap-1.5 p-1 rounded border ${
@@ -345,16 +345,16 @@ export const NetworkWidget: React.FC<NetworkWidgetProps> = ({
               <span className={hasNic ? 'font-digital text-xs' : 'font-mono text-xs'}>
                 {hasNic ? getStr(`SNIC${nicIndex}ULRATE`, '0') : '—'}
               </span>
-              <span className="text-[8px] text-[var(--text-muted)]">↑</span>
+              <span className="text-[9px] text-[var(--text-muted)]">↑</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between p-1 rounded bg-[var(--bg-main)]/50 border border-[var(--border-color)]/50">
             <div className="flex items-center gap-1">
               <Network size={10} className="text-[var(--text-muted)]" />
-              <span className="text-[12px] uppercase tracking-wider text-[var(--text-secondary)]">IP</span>
+              <span className="text-[13px] uppercase tracking-wider text-[var(--text-secondary)]">IP</span>
             </div>
-            <span className="font-mono text-[12px]">{getStr('SPRIIPADDR', '127.0.0.1')}</span>
+            <span className="font-mono text-[13px]">{getStr('SPRIIPADDR', '127.0.0.1')}</span>
           </div>
         </div>
       </div>

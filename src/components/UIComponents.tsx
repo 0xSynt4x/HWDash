@@ -8,7 +8,7 @@ interface PanelProps {
 
 export const Panel: React.FC<PanelProps> = ({ children, className = '' }) => (
   <div
-    className={`flex flex-col mb-1 bg-[var(--glass-bg)] backdrop-blur-md border border-[var(--glass-border)] rounded-md p-2 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[var(--border-hover)] transition-all duration-300 ${className}`}
+    className={`flex flex-col mb-1 bg-[var(--glass-bg)] backdrop-blur-md border border-[var(--glass-border)] rounded-md p-1.5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[var(--border-hover)] transition-all duration-300 ${className}`}
   >
     {children}
   </div>
@@ -48,7 +48,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ icon: Icon, title, rig
   };
 
   return (
-    <div className="flex items-center justify-between font-mono text-[14px] uppercase tracking-[2px] text-[var(--accent)] mb-1 px-1 border-b border-[var(--border-color)]/50 pb-1">
+    <div className="flex items-center justify-between font-mono text-[15px] uppercase tracking-[2px] text-[var(--accent)] mb-0.5 px-1 border-b border-[var(--border-color)]/50 pb-0.5 leading-none">
       <div className="flex items-center gap-2 flex-1">
         {Icon && <Icon size={13} strokeWidth={2} className="opacity-80" />}
         {isEditing ? (
@@ -73,7 +73,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ icon: Icon, title, rig
           </span>
         )}
       </div>
-      {rightText && <span className="ml-2 text-[10px]">{rightText}</span>}
+      {rightText && <span className="ml-2 text-[11px]">{rightText}</span>}
     </div>
   );
 };
@@ -91,7 +91,7 @@ export const StatRow: React.FC<StatRowProps> = ({
   value,
   colorClass = 'text-[var(--text-primary)]',
 }) => (
-  <div className="flex items-center justify-between px-1 py-0 font-mono text-[13px] hover:bg-[var(--bg-gradient-1)]/30 transition-colors rounded">
+  <div className="flex items-center justify-between px-1 py-0 font-mono text-[14px] leading-tight hover:bg-[var(--bg-gradient-1)]/30 transition-colors rounded">
     <div className="flex items-center gap-2 text-[var(--text-secondary)] w-28 shrink-0">
       {Icon && <Icon size={12} className="opacity-60 shrink-0" />}
       <span className="truncate">{label}</span>

@@ -12,6 +12,13 @@
   font-display: swap;
 }
 
+/* Tailwind v4 主题变量覆盖 — 让 font-mono / font-sans 都默认走 Digital-7。
+   实验性,失败则 git reset --hard 661204a 回退。 */
+@theme {
+  --font-sans: 'Digital-7 Mono', 'JetBrains Mono', 'Consolas', 'Microsoft YaHei', monospace;
+  --font-mono: 'Digital-7 Mono', 'JetBrains Mono', 'Consolas', 'Microsoft YaHei', monospace;
+}
+
 /**
  * 7 段数码管字体工具类 — 仅适合纯数字 / 数字 + 少量符号(. : - / )。
  * Digital-7 字体不包含完整字母字形,所以单位(°C、V、W)、标签(CPU、CHIP)
@@ -147,7 +154,7 @@
   --info: #007aff;
 
   --chart-cpu: #ff3b30;
-  --chart-gpu: #e82127;
+  --chart-gpu: #007aff;
   --chart-fps: #34c759;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -214,6 +221,10 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  /* 实验性:全局 Digital-7 数码管风格。字体仅含数字+少量 ASCII,字母大概率显示为方块,
+     fallback 到 JetBrains Mono / Consolas / 系统中文字体。如果效果不佳,git reset --hard 661204a 回退。 */
+  font-family: 'Digital-7 Mono', 'JetBrains Mono', 'Consolas', 'Microsoft YaHei', monospace;
+  letter-spacing: 0.05em;
 }
 
 ::selection {
