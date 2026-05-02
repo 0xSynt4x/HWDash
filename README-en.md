@@ -17,7 +17,7 @@ HWDash is a desktop hardware monitoring panel built with Tauri, React, and Vite,
 - Portrait and landscape layouts, mouse-wheel zoom (0.3×–3×)
 - Portable settings: stored as `settings.json` next to the exe; copy the folder to a USB stick and run anywhere
 - System tray: left-click to summon the window, right-click for show/quit menu
-- Integrated weather and time display via open-meteo public API (60-second backend cache)
+- Integrated animated SVG weather icons and time display via open-meteo public API (60-second backend cache)
 - Transparent borderless window, ideal as a secondary-monitor overlay
 
 ## Tech Stack
