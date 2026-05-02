@@ -239,9 +239,10 @@ export default function App() {
                   <div className="flex flex-row items-center justify-between pb-2 border-b border-[var(--border-color)]/40 px-1 mt-1">
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col items-start leading-none gap-1">
-                        <span className="text-4xl text-[var(--accent)] font-semibold">
-                          {weather.split('|')[0]}
-                        </span>
+                        <AnimatedWeather 
+                          icon={weather.split('|')[0]} 
+                          className="text-4xl text-[var(--accent)] font-semibold" 
+                        />
                         <span className="text-lg font-light text-[var(--text-secondary)]">
                           {weather.split('|')[1]}
                         </span>
