@@ -7,6 +7,7 @@ import { useWeather } from './hooks/useWeather';
 import { useSettings } from './hooks/useSettings';
 import { DynamicLineGraph } from './components/UIComponents';
 import { CpuWidget, GpuWidget, RamWidget, NetworkWidget } from './components/Widgets';
+import { AnimatedWeather } from './components/AnimatedWeather';
 
 const isTauri = (): boolean => '__TAURI_INTERNALS__' in window;
 
@@ -166,14 +167,15 @@ export default function App() {
             <div className="flex flex-col gap-2 w-full h-full pt-2">
               <div className="flex flex-row items-center justify-between pb-2 border-b border-[var(--border-color)]/50 mt-1 px-1">
                 <div className="flex items-center gap-3">
-                  <div className="flex flex-col items-start leading-none gap-1">
-                    <span className="text-4xl text-[var(--accent)] font-semibold">
-                      {weather.split('|')[0]}
-                    </span>
-                    <span className="text-lg font-light text-[var(--text-secondary)]">
-                      {weather.split('|')[1]}
-                    </span>
-                  </div>
+                    <div className="flex flex-col items-start leading-none gap-1">
+                      <AnimatedWeather 
+                        icon={weather.split('|')[0]} 
+                        className="text-4xl text-[var(--accent)] font-semibold" 
+                      />
+                      <span className="text-lg font-light text-[var(--text-secondary)]">
+                        {weather.split('|')[1]}
+                      </span>
+                    </div>
                 </div>
                 <div className="flex flex-col items-end">
                   <div className="font-digital text-4xl tracking-widest leading-none font-bold text-[var(--text-primary)]">
