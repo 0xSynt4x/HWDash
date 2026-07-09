@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using LibreHardwareMonitor.Hardware;
@@ -22,7 +23,13 @@ class Program
 
     static void Main(string[] args)
     {
-        Console.Error.WriteLine("[hwdash-sidecar] Initializing LibreHardwareMonitor...");
+        var isAdmin = IsRunningAsAdmin();
+        Console.Error.WriteLine($"[hwdash-sidecar] Initializing LibreHardwareMonitor... (Admin: {isAdmin})");
+
+        if (!isAdmin)
+        {
+            Console.Error.WriteLine("[hwdash-sidecar] WARNING: Not running as Administrator! CPU/GPU temperature, voltage, power, and clock sensors may not be available.");
+        }
 
         _computer = new Computer
         {
@@ -53,7 +60,6 @@ class Program
         catch (HttpListenerException ex)
         {
             Console.Error.WriteLine($"[hwdash-sidecar] Failed to bind port {port}: {ex.Message}");
-            // 尝试回退端口
             port = DefaultPort + 1;
             listener.Prefixes.Clear();
             listener.Prefixes.Add($"http://localhost:{port}/");
@@ -61,7 +67,6 @@ class Program
         }
 
         Console.Error.WriteLine($"[hwdash-sidecar] Listening on http://localhost:{port}");
-        // 向父进程发送就绪信号
         Console.WriteLine("READY");
         Console.Out.Flush();
 
@@ -85,6 +90,7 @@ class Program
                 if (path == "/api/hardware" || path == "/" || path == "/api/hardware/")
                 {
                     var data = ReadSensors();
+                    data["__admin"] = isAdmin.ToString().ToLowerInvariant();
                     var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
                     {
                         WriteIndented = false
@@ -133,6 +139,20 @@ class Program
         }
     }
 
+    static bool IsRunningAsAdmin()
+    {
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     static Dictionary<string, float> ReadRawSensors()
     {
         lock (_lock)
@@ -172,6 +192,40 @@ class Program
             _lastUpdate = DateTime.UtcNow;
             return new Dictionary<string, string>(result);
         }
+    }
+
+    /// <summary>
+    /// 从所有 GPU 传感器中筛选出首选(独显)GPU 的传感器。
+    /// 优先级: NVIDIA > AMD RX系列 > AMD核显 > Intel
+    /// </summary>
+    static List<KeyValuePair<string, float>> GetPreferredGpuEntries(Dictionary<string, float> raw)
+    {
+        var allGpu = raw.Where(kv =>
+            kv.Key.StartsWith("GpuNvidia/") ||
+            kv.Key.StartsWith("GpuAmd/") ||
+            kv.Key.StartsWith("GpuIntel/")).ToList();
+
+        if (allGpu.Count == 0) return allGpu;
+
+        // 获取所有独立 GPU 硬件前缀 (如 "GpuNvidia/NVIDIA GeForce RTX 5070 Ti")
+        var gpuPrefixes = allGpu
+            .Select(kv => string.Join("/", kv.Key.Split('/').Take(2)))
+            .Distinct()
+            .ToList();
+
+        // 按优先级排序: NVIDIA > AMD RX > AMD其他 > Intel
+        var preferred = gpuPrefixes
+            .OrderBy(p =>
+            {
+                if (p.StartsWith("GpuNvidia/")) return 0;
+                if (p.StartsWith("GpuAmd/") && (p.Contains("RX") || p.Contains("Radeon RX"))) return 1;
+                if (p.StartsWith("GpuAmd/")) return 2;
+                if (p.StartsWith("GpuIntel/")) return 3;
+                return 4;
+            })
+            .First();
+
+        return allGpu.Where(kv => kv.Key.StartsWith(preferred + "/")).ToList();
     }
 
     static void MapSensors(Dictionary<string, float> raw, Dictionary<string, string> result)
@@ -263,7 +317,6 @@ class Program
         }
         else
         {
-            // 兜底: 所有 Core Power 之和
             var corePowers = cpuEntries
                 .Where(kv => kv.Key.Contains("/Power/Core") && !kv.Key.Contains("Uncore"))
                 .Select(kv => kv.Value)
@@ -316,48 +369,59 @@ class Program
             ? chassisFan.Value.ToString("F0", CultureInfo.InvariantCulture)
             : "0";
 
-        // ==================== GPU ====================
-        var gpuEntries = raw.Where(kv =>
-            kv.Key.StartsWith("GpuNvidia/") ||
-            kv.Key.StartsWith("GpuAmd/") ||
-            kv.Key.StartsWith("GpuIntel/")).ToList();
+        // ==================== GPU (优先独显) ====================
+        var gpuEntries = GetPreferredGpuEntries(raw);
 
         if (gpuEntries.Count > 0)
         {
-            // GPU 核心温度
+            // GPU 核心温度: 优先精确匹配 "GPU Core",再匹配 "Hot Spot",最后兜底 "GPU"
             var gpuTemp = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Temperature/GPU Core") ||
-                kv.Key.Contains("/Temperature/GPU") ||
-                kv.Key.Contains("/Temperature/Hot Spot"));
+                kv.Key.Contains("/Temperature/GPU Core"));
+            if (gpuTemp.Value <= 0)
+                gpuTemp = gpuEntries.FirstOrDefault(kv =>
+                    kv.Key.Contains("/Temperature/GPU Hot Spot"));
+            if (gpuTemp.Value <= 0)
+                gpuTemp = gpuEntries.FirstOrDefault(kv =>
+                    kv.Key.Contains("/Temperature/GPU") &&
+                    !kv.Key.Contains("Memory") && !kv.Key.Contains("Junction") &&
+                    !kv.Key.Contains("VR SoC"));
             result["TGPU1"] = gpuTemp.Value > 0
                 ? gpuTemp.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 显存温度 / Hot Spot
+            // GPU 显存/热点温度
             var gpuMemTemp = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Temperature/GPU Memory") ||
                 kv.Key.Contains("/Temperature/GPU Hot Spot") ||
-                kv.Key.Contains("/Temperature/Memory") ||
+                kv.Key.Contains("/Temperature/GPU Memory Junction") ||
+                kv.Key.Contains("/Temperature/GPU Memory") ||
                 kv.Key.Contains("/Temperature/Hot Spot") ||
-                kv.Key.Contains("/Temperature/GPU Memory Junction"));
-            result["TGPU1MEM"] = gpuMemTemp.Value > 0
+                kv.Key.Contains("/Temperature/Memory"));
+            // 过滤无效值(如255表示传感器未就绪)
+            result["TGPU1MEM"] = (gpuMemTemp.Value > 0 && gpuMemTemp.Value < 250)
                 ? gpuMemTemp.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 核心利用率
+            // GPU 核心利用率: 优先精确匹配 "GPU Core",再匹配 D3D 3D
             var gpuLoad = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Load/GPU Core") || kv.Key.Contains("/Load/Core") ||
-                kv.Key.Contains("/Load/D3D") || kv.Key.Contains("/Load/GPU") ||
-                kv.Key.Contains("/Load/Video Engine"));
+                kv.Key.Contains("/Load/GPU Core"));
+            if (gpuLoad.Value <= 0)
+                gpuLoad = gpuEntries.FirstOrDefault(kv =>
+                    kv.Key.Contains("/Load/D3D 3D") || kv.Key.Contains("/Load/D3D"));
+            if (gpuLoad.Value <= 0)
+                gpuLoad = gpuEntries.FirstOrDefault(kv =>
+                    kv.Key.Contains("/Load/GPU") && !kv.Key.Contains("Memory") &&
+                    !kv.Key.Contains("Bus") && !kv.Key.Contains("Board") &&
+                    !kv.Key.Contains("Power"));
             result["SGPU1UTI"] = gpuLoad.Value > 0
                 ? gpuLoad.Value.ToString("F1", CultureInfo.InvariantCulture)
                 : "0";
 
             // GPU 显存利用率
             var gpuMemLoad = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Load/GPU Memory") ||
-                kv.Key.Contains("/Load/Memory") ||
-                kv.Key.Contains("/Load/VRAM"));
+                kv.Key.Contains("/Load/GPU Memory") && !kv.Key.Contains("Controller"));
+            if (gpuMemLoad.Value <= 0)
+                gpuMemLoad = gpuEntries.FirstOrDefault(kv =>
+                    kv.Key.Contains("/Load/Memory") || kv.Key.Contains("/Load/VRAM"));
             result["SVMEMUSAGE"] = gpuMemLoad.Value > 0
                 ? gpuMemLoad.Value.ToString("F1", CultureInfo.InvariantCulture)
                 : "0";
@@ -380,8 +444,9 @@ class Program
                 ? gpuMemClock.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 功耗: 优先 GPU Power / GPU TGP / PPT / Board Power
+            // GPU 功耗: GPU Package > GPU Power > GPU TGP > PPT > Board Power
             var gpuPower = gpuEntries.FirstOrDefault(kv =>
+                kv.Key.Contains("/Power/GPU Package") ||
                 kv.Key.Contains("/Power/GPU Power") ||
                 kv.Key.Contains("/Power/GPU TGP") ||
                 kv.Key.Contains("/Power/PPT") ||
@@ -417,24 +482,26 @@ class Program
                 ? gpuVolt.Value.ToString("F3", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 风扇 1
+            // GPU 风扇 1 (优先 Fan 类型,再 Control 类型)
             var gpuFan1 = gpuEntries.FirstOrDefault(kv =>
-                (kv.Key.Contains("/Control/GPU Fan") || kv.Key.Contains("/Control/Fan") ||
-                 kv.Key.Contains("/Fan/GPU")) &&
-                !kv.Key.Contains("#2") && !kv.Key.Contains("Fan 2"));
+                kv.Key.Contains("/Fan/GPU Fan") && !kv.Key.Contains("#2") && !kv.Key.Contains("Fan 2"));
+            if (gpuFan1.Value <= 0)
+                gpuFan1 = gpuEntries.FirstOrDefault(kv =>
+                    (kv.Key.Contains("/Control/GPU Fan") || kv.Key.Contains("/Control/Fan")) &&
+                    !kv.Key.Contains("#2") && !kv.Key.Contains("Fan 2"));
             result["DGPU1"] = gpuFan1.Value > 0
                 ? gpuFan1.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
             // GPU 风扇 2
             var gpuFan2 = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Control/") &&
-                (kv.Key.Contains("Fan #2") || kv.Key.Contains("Fan 2")));
+                (kv.Key.Contains("/Fan/") || kv.Key.Contains("/Control/")) &&
+                (kv.Key.Contains("Fan 2") || kv.Key.Contains("Fan #2")));
             result["DGPU1GPU2"] = gpuFan2.Value > 0
                 ? gpuFan2.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 显存用量
+            // GPU 显存用量 (MB)
             var gpuMemUsed = gpuEntries.FirstOrDefault(kv =>
                 (kv.Key.Contains("/SmallData/GPU Memory Used") ||
                  kv.Key.Contains("/SmallData/Memory Used") ||
@@ -447,7 +514,7 @@ class Program
                 ? Math.Round(gpuMemUsed.Value).ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 空闲显存
+            // GPU 空闲显存 (MB)
             var gpuMemFree = gpuEntries.FirstOrDefault(kv =>
                 kv.Key.Contains("/SmallData/GPU Memory Free") ||
                 kv.Key.Contains("/SmallData/Memory Free") ||
@@ -463,7 +530,6 @@ class Program
         }
         else
         {
-            // 无 GPU 数据时的默认值
             foreach (var key in new[] {
                 "TGPU1", "TGPU1MEM", "SGPU1UTI", "SVMEMUSAGE",
                 "SGPU1CLK", "SGPU1MEMCLK", "PGPU1", "PGPU1TDPP",
@@ -475,13 +541,15 @@ class Program
         }
 
         // ==================== 系统内存 ====================
+        // 注意: LibreHardwareMonitor 返回的内存值单位是 GB,不是 bytes
         var ramEntries = raw.Where(kv => kv.Key.StartsWith("Memory/")).ToList();
 
         var memUsed = ramEntries.FirstOrDefault(kv =>
             kv.Key.Contains("/Data/Memory Used") ||
             kv.Key.Contains("/Data/Used Memory"));
+        // LibreHardwareMonitor 返回 GB,转换为 MB
         result["SUSEDMEM"] = memUsed.Value > 0
-            ? Math.Round(memUsed.Value / 1048576f) // bytes → MB
+            ? Math.Round(memUsed.Value * 1024f) // GB → MB
                 .ToString("F0", CultureInfo.InvariantCulture)
             : "0";
 
@@ -489,19 +557,8 @@ class Program
             kv.Key.Contains("/Data/Memory Available") ||
             kv.Key.Contains("/Data/Available Memory"));
         result["SFREEMEM"] = memAvail.Value > 0
-            ? Math.Round(memAvail.Value / 1048576f).ToString("F0", CultureInfo.InvariantCulture)
+            ? Math.Round(memAvail.Value * 1024f).ToString("F0", CultureInfo.InvariantCulture) // GB → MB
             : "0";
-
-        // 如果 LibreHardwareMonitor 没有读到内存数据,尝试 Total - Used 或 Total - Available
-        if (result["SUSEDMEM"] == "0" && result["SFREEMEM"] == "0")
-        {
-            var memTotal = ramEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Data/Memory") && kv.Key.Contains("Total")).Value;
-            if (memTotal > 0)
-            {
-                // 如果后面有有效读数则回退计算
-            }
-        }
 
         // ==================== 系统运行时间 ====================
         var uptimeSec = Environment.TickCount64 / 1000;
@@ -536,11 +593,10 @@ class Program
         {
             string prefix = $"SNIC{nicIdx}";
 
-            // 下载速率 (MB/s)
+            // 下载速率 (LibreHardwareMonitor 返回 bytes/s,转换为 MB/s)
             var dlRate = group.FirstOrDefault(kv =>
-                kv.Key.Contains("/Load/Download Speed") ||
                 kv.Key.Contains("/Throughput/Download") ||
-                kv.Key.Contains("/Data/Down") ||
+                kv.Key.Contains("/Load/Download Speed") ||
                 kv.Key.Contains("/Data/Download Speed"));
             result[$"{prefix}DLRATE"] = dlRate.Value > 0
                 ? Math.Round(dlRate.Value / 1048576f, 1).ToString("F1", CultureInfo.InvariantCulture)
@@ -548,27 +604,26 @@ class Program
 
             // 上传速率 (MB/s)
             var ulRate = group.FirstOrDefault(kv =>
-                kv.Key.Contains("/Load/Upload Speed") ||
                 kv.Key.Contains("/Throughput/Upload") ||
-                kv.Key.Contains("/Data/Up") ||
+                kv.Key.Contains("/Load/Upload Speed") ||
                 kv.Key.Contains("/Data/Upload Speed"));
             result[$"{prefix}ULRATE"] = ulRate.Value > 0
                 ? Math.Round(ulRate.Value / 1048576f, 1).ToString("F1", CultureInfo.InvariantCulture)
                 : "0.0";
 
-            // 累计下载 (MB)
+            // 累计下载 (LibreHardwareMonitor 返回 GB,转换为 MB)
             var totDownload = group.FirstOrDefault(kv =>
+                kv.Key.Contains("/Data/Data Downloaded") ||
                 kv.Key.Contains("/Data/Download") ||
                 kv.Key.Contains("/Data/Total Received") ||
                 kv.Key.Contains("/Data/Received"));
             result[$"{prefix}TOTDL"] = totDownload.Value > 0
-                ? Math.Round(totDownload.Value / 1048576f, 1).ToString("F1", CultureInfo.InvariantCulture)
+                ? Math.Round(totDownload.Value * 1024f, 1).ToString("F1", CultureInfo.InvariantCulture) // GB → MB
                 : "0.0";
 
             nicIdx++;
         }
 
-        // 如果没有网络传感器数据,添加一个默认 NIC 以保持 UI 完整性
         if (nicIdx == 1)
         {
             result["SNIC1DLRATE"] = "0.0";
