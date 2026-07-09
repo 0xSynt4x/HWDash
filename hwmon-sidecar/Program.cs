@@ -14,6 +14,7 @@ class Program
     static Computer? _computer;
     static readonly object _lock = new();
     static Dictionary<string, string>? _cachedData;
+    static Dictionary<string, float>? _cachedRaw;
     static DateTime _lastUpdate = DateTime.MinValue;
     static readonly TimeSpan CacheTtl = TimeSpan.FromMilliseconds(900);
 
@@ -35,7 +36,7 @@ class Program
         _computer.Open();
 
         // 传感器首次更新较慢,需要多次采样
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 5; i++)
         {
             foreach (var hw in _computer.Hardware)
                 hw.Update();
@@ -94,6 +95,19 @@ class Program
                     ctx.Response.OutputStream.Write(buffer);
                     ctx.Response.OutputStream.Flush();
                 }
+                else if (path == "/api/sensors" || path == "/api/sensors/")
+                {
+                    var raw = ReadRawSensors();
+                    var json = JsonSerializer.Serialize(raw, new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+                    var buffer = Encoding.UTF8.GetBytes(json);
+                    ctx.Response.ContentType = "application/json; charset=utf-8";
+                    ctx.Response.ContentLength64 = buffer.Length;
+                    ctx.Response.OutputStream.Write(buffer);
+                    ctx.Response.OutputStream.Flush();
+                }
                 else if (path == "/health" || path == "/api/health")
                 {
                     var buffer = Encoding.UTF8.GetBytes("{\"ok\":true}");
@@ -119,15 +133,14 @@ class Program
         }
     }
 
-    static Dictionary<string, string> ReadSensors()
+    static Dictionary<string, float> ReadRawSensors()
     {
         lock (_lock)
         {
-            if (_cachedData != null && (DateTime.UtcNow - _lastUpdate) < CacheTtl)
-                return new Dictionary<string, string>(_cachedData);
-
             var raw = new Dictionary<string, float>();
-            foreach (var hw in _computer!.Hardware)
+            if (_computer == null) return raw;
+
+            foreach (var hw in _computer.Hardware)
             {
                 hw.Update();
                 foreach (var sensor in hw.Sensors)
@@ -139,11 +152,23 @@ class Program
                     }
                 }
             }
+            return raw;
+        }
+    }
 
+    static Dictionary<string, string> ReadSensors()
+    {
+        lock (_lock)
+        {
+            if (_cachedData != null && _cachedRaw != null && (DateTime.UtcNow - _lastUpdate) < CacheTtl)
+                return new Dictionary<string, string>(_cachedData);
+
+            var raw = ReadRawSensors();
             var result = new Dictionary<string, string>();
             MapSensors(raw, result);
 
             _cachedData = result;
+            _cachedRaw = raw;
             _lastUpdate = DateTime.UtcNow;
             return new Dictionary<string, string>(result);
         }
@@ -154,10 +179,11 @@ class Program
         // ==================== CPU ====================
         var cpuEntries = raw.Where(kv => kv.Key.StartsWith("Cpu/")).ToList();
 
-        // CPU 温度: Package > Core Max > 第一个Core
+        // CPU 温度: Package > Core Average > Core Max > 所有Core平均
         var cpuTemp = cpuEntries.FirstOrDefault(kv =>
             kv.Key.Contains("/Temperature/CPU Package") ||
             kv.Key.Contains("/Temperature/Package") ||
+            kv.Key.Contains("/Temperature/Core Average") ||
             kv.Key.Contains("/Temperature/Core (Tctl/Tdie)"));
         if (cpuTemp.Value > 0)
         {
@@ -165,26 +191,45 @@ class Program
         }
         else
         {
-            var cores = cpuEntries
-                .Where(kv => kv.Key.Contains("/Temperature/Core") && !kv.Key.Contains("Max"))
+            var coreAvgs = cpuEntries
+                .Where(kv => kv.Key.Contains("/Temperature/Core Average"))
                 .Select(kv => kv.Value)
                 .ToList();
-            if (cores.Count > 0)
-                result["TCPU"] = cores.Max().ToString("F0", CultureInfo.InvariantCulture);
+            var cores = cpuEntries
+                .Where(kv => kv.Key.Contains("/Temperature/Core") && !kv.Key.Contains("Max") && !kv.Key.Contains("Average"))
+                .Select(kv => kv.Value)
+                .ToList();
+            if (coreAvgs.Count > 0)
+                result["TCPU"] = coreAvgs.Max().ToString("F0", CultureInfo.InvariantCulture);
+            else if (cores.Count > 0)
+                result["TCPU"] = cores.Average().ToString("F0", CultureInfo.InvariantCulture);
             else
                 result["TCPU"] = "0";
         }
 
-        // CPU 利用率
+        // CPU 利用率: Total > Core Average > 所有Core平均
         var cpuLoad = cpuEntries.FirstOrDefault(kv =>
-            kv.Key.Contains("/Load/CPU Total") || kv.Key.Contains("/Load/Total"));
-        result["SCPUUTI"] = cpuLoad.Value > 0
-            ? cpuLoad.Value.ToString("F1", CultureInfo.InvariantCulture)
-            : "0";
+            kv.Key.Contains("/Load/CPU Total") ||
+            kv.Key.Contains("/Load/Total") ||
+            kv.Key.Contains("/Load/Core Average"));
+        if (cpuLoad.Value > 0)
+        {
+            result["SCPUUTI"] = cpuLoad.Value.ToString("F1", CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            var coreLoads = cpuEntries
+                .Where(kv => kv.Key.Contains("/Load/Core") && !kv.Key.Contains("Max") && !kv.Key.Contains("Average"))
+                .Select(kv => kv.Value)
+                .ToList();
+            result["SCPUUTI"] = coreLoads.Count > 0
+                ? coreLoads.Average().ToString("F1", CultureInfo.InvariantCulture)
+                : "0";
+        }
 
         // CPU 频率 (取最高核心频率)
         var cpuClocks = cpuEntries
-            .Where(kv => kv.Key.Contains("/Clock/Core"))
+            .Where(kv => kv.Key.Contains("/Clock/Core") && !kv.Key.Contains("Bus") && !kv.Key.Contains("Cache"))
             .Select(kv => kv.Value)
             .ToList();
         result["SCPUCLK"] = cpuClocks.Count > 0
@@ -193,24 +238,42 @@ class Program
                 ? cpuEntries.First(kv => kv.Key.Contains("/Clock/")).Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0");
 
-        // CPU 电压
+        // CPU 电压: 优先 CPU Core / VCore,否则第一个电压传感器
         var cpuVolt = cpuEntries.FirstOrDefault(kv =>
             kv.Key.Contains("/Voltage/CPU Core") ||
             kv.Key.Contains("/Voltage/VCore") ||
+            kv.Key.Contains("/Voltage/Core VID") ||
             kv.Key.Contains("/Voltage/VID") ||
             kv.Key.Contains("/Voltage/Voltage"));
         result["VCPU"] = cpuVolt.Value > 0
             ? cpuVolt.Value.ToString("F3", CultureInfo.InvariantCulture)
-            : "0";
+            : (cpuEntries.FirstOrDefault(kv => kv.Key.Contains("/Voltage/")).Value > 0
+                ? cpuEntries.First(kv => kv.Key.Contains("/Voltage/")).Value.ToString("F3", CultureInfo.InvariantCulture)
+                : "0");
 
-        // CPU 功耗
+        // CPU 功耗: Package > PPT > Core Power之和 > CPU Power
         var cpuPower = cpuEntries.FirstOrDefault(kv =>
             kv.Key.Contains("/Power/CPU Package") ||
             kv.Key.Contains("/Power/Package") ||
+            kv.Key.Contains("/Power/PPT") ||
             kv.Key.Contains("/Power/CPU Power"));
-        result["PCPUPKG"] = cpuPower.Value > 0
-            ? cpuPower.Value.ToString("F1", CultureInfo.InvariantCulture)
-            : "0";
+        if (cpuPower.Value > 0)
+        {
+            result["PCPUPKG"] = cpuPower.Value.ToString("F1", CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            // 兜底: 所有 Core Power 之和
+            var corePowers = cpuEntries
+                .Where(kv => kv.Key.Contains("/Power/Core") && !kv.Key.Contains("Uncore"))
+                .Select(kv => kv.Value)
+                .ToList();
+            result["PCPUPKG"] = corePowers.Count > 0
+                ? corePowers.Sum().ToString("F1", CultureInfo.InvariantCulture)
+                : (cpuEntries.FirstOrDefault(kv => kv.Key.Contains("/Power/")).Value > 0
+                    ? cpuEntries.First(kv => kv.Key.Contains("/Power/")).Value.ToString("F1", CultureInfo.InvariantCulture)
+                    : "0");
+        }
 
         // ==================== 主板 (CHIP/VRM temp, 风扇) ====================
         var moboEntries = raw.Where(kv => kv.Key.StartsWith("Motherboard/") ||
@@ -220,7 +283,8 @@ class Program
         var chipTemp = moboEntries.FirstOrDefault(kv =>
             kv.Key.Contains("/Temperature/") &&
             (kv.Key.Contains("Chipset") || kv.Key.Contains("PCH") ||
-             kv.Key.Contains("System") || kv.Key.Contains("Motherboard")));
+             kv.Key.Contains("System") || kv.Key.Contains("Motherboard") ||
+             kv.Key.Contains("Auxiliary")));
         result["TCHIP"] = chipTemp.Value > 0
             ? chipTemp.Value.ToString("F0", CultureInfo.InvariantCulture)
             : "0";
@@ -228,7 +292,8 @@ class Program
         // VRM 温度
         var vrmTemp = moboEntries.FirstOrDefault(kv =>
             kv.Key.Contains("/Temperature/") &&
-            (kv.Key.Contains("VRM") || kv.Key.Contains("VR ")));
+            (kv.Key.Contains("VRM") || kv.Key.Contains("VR ") ||
+             kv.Key.Contains("VR_LOOP") || kv.Key.Contains("Voltage Regulator")));
         result["TVRM"] = vrmTemp.Value > 0
             ? vrmTemp.Value.ToString("F0", CultureInfo.InvariantCulture)
             : "0";
@@ -262,17 +327,19 @@ class Program
             // GPU 核心温度
             var gpuTemp = gpuEntries.FirstOrDefault(kv =>
                 kv.Key.Contains("/Temperature/GPU Core") ||
-                kv.Key.Contains("/Temperature/GPU"));
+                kv.Key.Contains("/Temperature/GPU") ||
+                kv.Key.Contains("/Temperature/Hot Spot"));
             result["TGPU1"] = gpuTemp.Value > 0
                 ? gpuTemp.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 显存温度
+            // GPU 显存温度 / Hot Spot
             var gpuMemTemp = gpuEntries.FirstOrDefault(kv =>
                 kv.Key.Contains("/Temperature/GPU Memory") ||
                 kv.Key.Contains("/Temperature/GPU Hot Spot") ||
                 kv.Key.Contains("/Temperature/Memory") ||
-                kv.Key.Contains("/Temperature/Hot Spot"));
+                kv.Key.Contains("/Temperature/Hot Spot") ||
+                kv.Key.Contains("/Temperature/GPU Memory Junction"));
             result["TGPU1MEM"] = gpuMemTemp.Value > 0
                 ? gpuMemTemp.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
@@ -280,38 +347,47 @@ class Program
             // GPU 核心利用率
             var gpuLoad = gpuEntries.FirstOrDefault(kv =>
                 kv.Key.Contains("/Load/GPU Core") || kv.Key.Contains("/Load/Core") ||
-                kv.Key.Contains("/Load/D3D") || kv.Key.Contains("/Load/GPU"));
+                kv.Key.Contains("/Load/D3D") || kv.Key.Contains("/Load/GPU") ||
+                kv.Key.Contains("/Load/Video Engine"));
             result["SGPU1UTI"] = gpuLoad.Value > 0
                 ? gpuLoad.Value.ToString("F1", CultureInfo.InvariantCulture)
                 : "0";
 
             // GPU 显存利用率
             var gpuMemLoad = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Load/GPU Memory") || kv.Key.Contains("/Load/Memory"));
+                kv.Key.Contains("/Load/GPU Memory") ||
+                kv.Key.Contains("/Load/Memory") ||
+                kv.Key.Contains("/Load/VRAM"));
             result["SVMEMUSAGE"] = gpuMemLoad.Value > 0
                 ? gpuMemLoad.Value.ToString("F1", CultureInfo.InvariantCulture)
                 : "0";
 
             // GPU 核心时钟
             var gpuClock = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Clock/GPU Core") || kv.Key.Contains("/Clock/Core"));
+                kv.Key.Contains("/Clock/GPU Core") ||
+                kv.Key.Contains("/Clock/Core") ||
+                kv.Key.Contains("/Clock/GPU Clock"));
             result["SGPU1CLK"] = gpuClock.Value > 0
                 ? gpuClock.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
             // GPU 显存时钟
             var gpuMemClock = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Clock/GPU Memory") || kv.Key.Contains("/Clock/Memory"));
+                kv.Key.Contains("/Clock/GPU Memory") ||
+                kv.Key.Contains("/Clock/Memory") ||
+                kv.Key.Contains("/Clock/VRAM"));
             result["SGPU1MEMCLK"] = gpuMemClock.Value > 0
                 ? gpuMemClock.Value.ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
 
-            // GPU 功耗
+            // GPU 功耗: 优先 GPU Power / GPU TGP / PPT / Board Power
             var gpuPower = gpuEntries.FirstOrDefault(kv =>
                 kv.Key.Contains("/Power/GPU Power") ||
                 kv.Key.Contains("/Power/GPU TGP") ||
-                kv.Key.Contains("/Power/Power") ||
-                kv.Key.Contains("/Power/Board Power"));
+                kv.Key.Contains("/Power/PPT") ||
+                kv.Key.Contains("/Power/Board Power") ||
+                kv.Key.Contains("/Power/Package Power") ||
+                kv.Key.Contains("/Power/Power"));
             result["PGPU1"] = gpuPower.Value > 0
                 ? gpuPower.Value.ToString("F1", CultureInfo.InvariantCulture)
                 : "0";
@@ -320,7 +396,8 @@ class Program
             var gpuPowerLimit = gpuEntries.FirstOrDefault(kv =>
                 kv.Key.Contains("/Power/GPU Power Limit") ||
                 kv.Key.Contains("/Power/Power Limit") ||
-                kv.Key.Contains("/Power/TGP Limit"));
+                kv.Key.Contains("/Power/TGP Limit") ||
+                kv.Key.Contains("/Power/PL1 Limit"));
             if (gpuPower.Value > 0 && gpuPowerLimit.Value > 0)
             {
                 var tdpPct = (gpuPower.Value / gpuPowerLimit.Value) * 100f;
@@ -333,14 +410,17 @@ class Program
 
             // GPU 电压
             var gpuVolt = gpuEntries.FirstOrDefault(kv =>
-                kv.Key.Contains("/Voltage/GPU Core") || kv.Key.Contains("/Voltage/Core"));
+                kv.Key.Contains("/Voltage/GPU Core") ||
+                kv.Key.Contains("/Voltage/Core") ||
+                kv.Key.Contains("/Voltage/GPU Voltage"));
             result["VGPU1"] = gpuVolt.Value > 0
                 ? gpuVolt.Value.ToString("F3", CultureInfo.InvariantCulture)
                 : "0";
 
             // GPU 风扇 1
             var gpuFan1 = gpuEntries.FirstOrDefault(kv =>
-                (kv.Key.Contains("/Control/GPU Fan") || kv.Key.Contains("/Control/Fan")) &&
+                (kv.Key.Contains("/Control/GPU Fan") || kv.Key.Contains("/Control/Fan") ||
+                 kv.Key.Contains("/Fan/GPU")) &&
                 !kv.Key.Contains("#2") && !kv.Key.Contains("Fan 2"));
             result["DGPU1"] = gpuFan1.Value > 0
                 ? gpuFan1.Value.ToString("F0", CultureInfo.InvariantCulture)
@@ -359,7 +439,9 @@ class Program
                 (kv.Key.Contains("/SmallData/GPU Memory Used") ||
                  kv.Key.Contains("/SmallData/Memory Used") ||
                  kv.Key.Contains("/Data/GPU Memory Used") ||
-                 kv.Key.Contains("/Data/Memory Used")) &&
+                 kv.Key.Contains("/Data/Memory Used") ||
+                 kv.Key.Contains("/SmallData/VRAM Used") ||
+                 kv.Key.Contains("/Data/VRAM Used")) &&
                 !kv.Key.Contains("Free") && !kv.Key.Contains("Total") && !kv.Key.Contains("Available"));
             result["SUSEDVMEM"] = gpuMemUsed.Value > 0
                 ? Math.Round(gpuMemUsed.Value).ToString("F0", CultureInfo.InvariantCulture)
@@ -372,8 +454,10 @@ class Program
                 kv.Key.Contains("/Data/GPU Memory Free") ||
                 kv.Key.Contains("/Data/Memory Free") ||
                 kv.Key.Contains("/SmallData/GPU Memory Available") ||
-                kv.Key.Contains("/Data/GPU Memory Available"));
-            result["SFREEVMEM"] = gpuMemFree.Value > 0
+                kv.Key.Contains("/Data/GPU Memory Available") ||
+                kv.Key.Contains("/SmallData/VRAM Free") ||
+                kv.Key.Contains("/Data/VRAM Free"));
+            result["SFREEVEM"] = gpuMemFree.Value > 0
                 ? Math.Round(gpuMemFree.Value).ToString("F0", CultureInfo.InvariantCulture)
                 : "0";
         }
@@ -383,7 +467,7 @@ class Program
             foreach (var key in new[] {
                 "TGPU1", "TGPU1MEM", "SGPU1UTI", "SVMEMUSAGE",
                 "SGPU1CLK", "SGPU1MEMCLK", "PGPU1", "PGPU1TDPP",
-                "VGPU1", "DGPU1", "DGPU1GPU2", "SUSEDVMEM", "SFREEVMEM"
+                "VGPU1", "DGPU1", "DGPU1GPU2", "SUSEDVMEM", "SFREEVEM"
             })
             {
                 result.TryAdd(key, "0");
@@ -394,29 +478,28 @@ class Program
         var ramEntries = raw.Where(kv => kv.Key.StartsWith("Memory/")).ToList();
 
         var memUsed = ramEntries.FirstOrDefault(kv =>
-            kv.Key.Contains("/Data/Memory Used"));
+            kv.Key.Contains("/Data/Memory Used") ||
+            kv.Key.Contains("/Data/Used Memory"));
         result["SUSEDMEM"] = memUsed.Value > 0
             ? Math.Round(memUsed.Value / 1048576f) // bytes → MB
                 .ToString("F0", CultureInfo.InvariantCulture)
             : "0";
 
         var memAvail = ramEntries.FirstOrDefault(kv =>
-            kv.Key.Contains("/Data/Memory Available"));
+            kv.Key.Contains("/Data/Memory Available") ||
+            kv.Key.Contains("/Data/Available Memory"));
         result["SFREEMEM"] = memAvail.Value > 0
             ? Math.Round(memAvail.Value / 1048576f).ToString("F0", CultureInfo.InvariantCulture)
             : "0";
 
-        // 如果 LibreHardwareMonitor 没有读到内存数据,回退到 .NET GC
+        // 如果 LibreHardwareMonitor 没有读到内存数据,尝试 Total - Used 或 Total - Available
         if (result["SUSEDMEM"] == "0" && result["SFREEMEM"] == "0")
         {
-            var gcMem = GC.GetGCMemoryInfo();
-            var totalPhysical = gcMem.TotalAvailableMemoryBytes;
-            if (totalPhysical > 0)
+            var memTotal = ramEntries.FirstOrDefault(kv =>
+                kv.Key.Contains("/Data/Memory") && kv.Key.Contains("Total")).Value;
+            if (memTotal > 0)
             {
-                // 这里只能拿到 GC 相关的内存,不是真正的物理内存
-                // 留空让前端处理
-                result["SUSEDMEM"] = "0";
-                result["SFREEMEM"] = "0";
+                // 如果后面有有效读数则回退计算
             }
         }
 
@@ -457,7 +540,8 @@ class Program
             var dlRate = group.FirstOrDefault(kv =>
                 kv.Key.Contains("/Load/Download Speed") ||
                 kv.Key.Contains("/Throughput/Download") ||
-                kv.Key.Contains("/Data/Down"));
+                kv.Key.Contains("/Data/Down") ||
+                kv.Key.Contains("/Data/Download Speed"));
             result[$"{prefix}DLRATE"] = dlRate.Value > 0
                 ? Math.Round(dlRate.Value / 1048576f, 1).ToString("F1", CultureInfo.InvariantCulture)
                 : "0.0";
@@ -466,7 +550,8 @@ class Program
             var ulRate = group.FirstOrDefault(kv =>
                 kv.Key.Contains("/Load/Upload Speed") ||
                 kv.Key.Contains("/Throughput/Upload") ||
-                kv.Key.Contains("/Data/Up"));
+                kv.Key.Contains("/Data/Up") ||
+                kv.Key.Contains("/Data/Upload Speed"));
             result[$"{prefix}ULRATE"] = ulRate.Value > 0
                 ? Math.Round(ulRate.Value / 1048576f, 1).ToString("F1", CultureInfo.InvariantCulture)
                 : "0.0";
