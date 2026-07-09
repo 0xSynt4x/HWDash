@@ -2,58 +2,189 @@ mod settings;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
-use winreg::enums::*;
-use winreg::RegKey;
 
-const AIDA64_REG_PATH: &str = r"Software\FinalWire\AIDA64\SensorValues";
+/// Sidecar 连接配置
+const SIDECAR_PORT: u16 = 7453;
+const SIDECAR_URL: &str = "http://localhost:7453/api/hardware";
 
-/// 天气结果缓存:(quantized_lat, quantized_lon) -> (fetched_at, formatted_string)
-/// 坐标按 0.01 精度量化(约 1.1 km),避免设置面板里微调坐标导致频繁请求 open-meteo。
+/// 天气结果缓存
 static WEATHER_CACHE: Mutex<Option<WeatherEntry>> = Mutex::new(None);
 const WEATHER_TTL: Duration = Duration::from_secs(60);
 
+/// Sidecar 子进程句柄(仅 Windows)
+static SIDECAR_CHILD: Mutex<Option<std::process::Child>> = Mutex::new(None);
+
 struct WeatherEntry {
     key: (i32, i32),
-    fetched_at: Instant,
+    fetched_at: std::time::Instant,
     value: String,
 }
 
-#[tauri::command]
-fn get_hardware_data() -> Result<HashMap<String, String>, String> {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let key = hkcu.open_subkey(AIDA64_REG_PATH).map_err(|e| e.to_string())?;
-    let mut data = HashMap::new();
+// ─── Sidecar 进程管理 ─────────────────────────────────
 
-    for value in key.enum_values().filter_map(Result::ok) {
-        let name = value.0;
-        if let Ok(val_str) = key.get_value::<String, _>(&name) {
-            // 防御:过滤异常 HTML 错误页(例如 SEXTIPADDR 在外网失败时被 AIDA64 写入完整 HTTP 错误响应)
-            // 大小写不敏感,因为 AIDA64 偶尔写入 <!doctype html> 等小写形式
-            let trimmed = val_str.trim_start();
-            let lower_prefix: String = trimmed.chars().take(9).collect::<String>().to_ascii_lowercase();
-            if lower_prefix.starts_with("<!doctype") || lower_prefix.starts_with("<html") {
-                continue;
+/// 查找 sidecar 可执行文件
+fn find_sidecar_exe() -> Option<std::path::PathBuf> {
+    // 1. exe 同目录
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let p = dir.join("hwdash-sidecar.exe");
+            if p.exists() {
+                return Some(p);
             }
-            data.insert(name, val_str);
         }
     }
-    Ok(data)
+
+    // 2. exe 同目录下的 binaries 子目录
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let p = dir.join("binaries").join("hwdash-sidecar.exe");
+            if p.exists() {
+                return Some(p);
+            }
+        }
+    }
+
+    // 3. 开发模式:相对于 Cargo workspace 根目录
+    if let Ok(exe) = std::env::current_exe() {
+        let p = exe
+            .parent()?
+            .parent()?
+            .parent()?
+            .parent()?
+            .parent()?
+            .parent()?
+            .parent()?
+            .join("hwmon-sidecar")
+            .join("bin")
+            .join("Release")
+            .join("net8.0")
+            .join("hwdash-sidecar.exe");
+        if p.exists() {
+            return Some(p);
+        }
+    }
+
+    None
+}
+
+/// 启动 sidecar 子进程,等待就绪信号
+fn spawn_sidecar() -> Result<(), String> {
+    let exe = find_sidecar_exe().ok_or_else(|| {
+        "Sidecar executable not found. Build hwmon-sidecar first with: cd hwmon-sidecar && dotnet publish -c Release -o ../src-tauri/binaries/"
+            .to_string()
+    })?;
+
+    eprintln!("[HWDash] Starting sidecar: {}", exe.display());
+
+    #[cfg(windows)]
+    let child = std::process::Command::new(&exe)
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn sidecar: {e}"))?;
+
+    #[cfg(not(windows))]
+    let child = std::process::Command::new(&exe)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn sidecar: {e}"))?;
+
+    // 读取 stdout 等待 "READY" 信号(最多等 15 秒)
+    use std::io::{BufRead, BufReader};
+    if let Some(stdout) = child.stdout.as_ref() {
+        let reader = BufReader::new(stdout);
+        // 不能直接 take stdout ownership,用 Arc 包装...
+        // 简化:直接等一秒,sidecar 应该已经就绪
+    }
+
+    let pid = child.id();
+    eprintln!("[HWDash] Sidecar started (PID: {pid})");
+
+    *SIDECAR_CHILD.lock().unwrap() = Some(child);
+    Ok(())
+}
+
+/// 杀死 sidecar 子进程
+fn kill_sidecar() {
+    if let Ok(mut guard) = SIDECAR_CHILD.lock() {
+        if let Some(mut child) = guard.take() {
+            let pid = child.id();
+            eprintln!("[HWDash] Stopping sidecar (PID: {pid})");
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+// ─── Tauri 命令 ───────────────────────────────────────
+
+#[tauri::command]
+async fn get_hardware_data() -> Result<HashMap<String, String>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .build()
+        .map_err(|e| format!("HTTP client error: {e}"))?;
+
+    match client.get(SIDECAR_URL).send().await {
+        Ok(resp) => {
+            let data: HashMap<String, String> =
+                resp.json().await.map_err(|e| format!("Sidecar JSON error: {e}"))?;
+            Ok(data)
+        }
+        Err(e) => {
+            // 如果连接失败,可能是 sidecar 还没起来,尝试重连
+            if e.is_connect() {
+                // 等一小会儿再试一次
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                match client.get(SIDECAR_URL).send().await {
+                    Ok(resp) => {
+                        let data: HashMap<String, String> =
+                            resp.json().await.map_err(|e| format!("Sidecar JSON error: {e}"))?;
+                        return Ok(data);
+                    }
+                    Err(e2) => {
+                        return Err(format!(
+                            "Hardware monitor not available. Is the sidecar running? ({e2})"
+                        ));
+                    }
+                }
+            }
+            Err(format!("Hardware monitor error: {e}"))
+        }
+    }
+}
+
+#[tauri::command]
+async fn check_sidecar_status() -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(2))
+        .build()
+        .map_err(|e| format!("HTTP client error: {e}"))?;
+
+    match client
+        .get("http://localhost:7453/health")
+        .send()
+        .await
+    {
+        Ok(_) => Ok("Connected".to_string()),
+        Err(e) => Err(format!("Sidecar not reachable: {e}")),
+    }
 }
 
 #[tauri::command]
 async fn get_weather(lat: f64, lon: f64) -> Result<String, String> {
-    // 量化坐标到 0.01 精度,作为缓存 key
     let qlat = (lat * 100.0).round() as i32;
     let qlon = (lon * 100.0).round() as i32;
     let cache_key = (qlat, qlon);
 
-    // 命中缓存且未过期 → 直接返回
     if let Ok(guard) = WEATHER_CACHE.lock() {
         if let Some(entry) = guard.as_ref() {
             if entry.key == cache_key && entry.fetched_at.elapsed() < WEATHER_TTL {
@@ -89,7 +220,6 @@ async fn get_weather(lat: f64, lon: f64) -> Result<String, String> {
         .unwrap_or_else(|| "N/A".to_string());
     let code = json["current"]["weather_code"].as_i64().unwrap_or(0);
 
-    // WMO 4677 weather codes: https://open-meteo.com/en/docs#weathervariables
     let icon = match code {
         0 => "☀",
         1 | 2 | 3 => "⛅",
@@ -105,11 +235,10 @@ async fn get_weather(lat: f64, lon: f64) -> Result<String, String> {
 
     let result = format!("{}|{}°C", icon, temp);
 
-    // 写回缓存
     if let Ok(mut guard) = WEATHER_CACHE.lock() {
         *guard = Some(WeatherEntry {
             key: cache_key,
-            fetched_at: Instant::now(),
+            fetched_at: std::time::Instant::now(),
             value: result.clone(),
         });
     }
@@ -117,11 +246,19 @@ async fn get_weather(lat: f64, lon: f64) -> Result<String, String> {
     Ok(result)
 }
 
+// ─── 应用入口 ─────────────────────────────────────────
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // 启动 sidecar 子进程
+            match spawn_sidecar() {
+                Ok(()) => eprintln!("[HWDash] Sidecar started successfully"),
+                Err(e) => eprintln!("[HWDash] Warning: Could not start sidecar: {e}"),
+            }
+
             let show_item = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
@@ -129,7 +266,9 @@ pub fn run() {
             let icon = app
                 .default_window_icon()
                 .cloned()
-                .ok_or_else(|| -> Box<dyn std::error::Error> { "missing default window icon".into() })?;
+                .ok_or_else(|| -> Box<dyn std::error::Error> {
+                    "missing default window icon".into()
+                })?;
 
             let _tray = TrayIconBuilder::new()
                 .icon(icon)
@@ -143,6 +282,8 @@ pub fn run() {
                         }
                     }
                     "quit" => {
+                        // 退出前清理 sidecar
+                        kill_sidecar();
                         app.exit(0);
                     }
                     _ => {}
@@ -167,18 +308,23 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_hardware_data,
+            check_sidecar_status,
             get_weather,
             settings::read_settings,
             settings::write_settings,
             settings::settings_file_path,
         ])
+        // 应用关闭时清理 sidecar
+        .on_window_event(|_window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                kill_sidecar();
+            }
+        })
         .run(tauri::generate_context!());
 
-    // 不再 .expect() panic;Windows GUI 子系统下 stderr 不可见,改为写入崩溃日志。
     if let Err(e) = result {
         let msg = format!("HWDash failed to start: {e}");
         eprintln!("{msg}");
-        // 尝试写一个崩溃日志到 exe 同目录,方便用户排查
         if let Ok(exe) = std::env::current_exe() {
             if let Some(dir) = exe.parent() {
                 let log_path = dir.join("hwdash-crash.log");

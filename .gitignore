@@ -12,3 +12,7 @@ src-tauri/target/
 settings.json
 # AIDA64 注册表 dump(含本机隐私指纹,仅供本地调试)
 *.reg
+# Sidecar 构建输出
+hwmon-sidecar/bin/
+hwmon-sidecar/obj/
+src-tauri/binaries/

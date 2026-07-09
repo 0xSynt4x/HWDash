@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { Calendar } from 'lucide-react';
 import { SettingsMenu } from './components/SettingsMenu';
-import { useAida64 } from './hooks/useAida64';
+import { useHardware } from './hooks/useHardware';
 import { useWeather } from './hooks/useWeather';
 import { useSettings } from './hooks/useSettings';
 import { DynamicLineGraph } from './components/UIComponents';
@@ -18,7 +18,7 @@ const BASE_SIZES = {
 
 export default function App() {
   const { settings, loaded, update } = useSettings();
-  const { time, status, getStr, getNum, aida } = useAida64();
+  const { time, status, getStr, getNum, hwData } = useHardware();
   const { weather } = useWeather(settings.latitude, settings.longitude);
 
   const [showNicMenu, setShowNicMenu] = useState(false);
@@ -29,12 +29,12 @@ export default function App() {
   // 动态获取可用的网卡编号
   const availableNics = useMemo(() => {
     const nics = new Set<number>();
-    Object.keys(aida).forEach((key) => {
+    Object.keys(hwData).forEach((key) => {
       const match = key.match(/^(?:Value\.)?SNIC(\d+)/);
       if (match) nics.add(parseInt(match[1], 10));
     });
     return Array.from(nics).sort((a, b) => a - b);
-  }, [aida]);
+  }, [hwData]);
 
   // 自动选择第一个可用 NIC(若当前未选或失效)
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function App() {
           <div
             className="absolute top-4 right-4 w-2 h-2 rounded-full z-50 shadow-[0_0_8px_currentColor] transition-colors"
             style={{
-              color: status === 'Connected to AIDA64' ? '#00ff00' : '#ff0055',
+              color: status === 'Connected' ? '#00ff00' : '#ff0055',
               backgroundColor: 'currentColor',
             }}
             title={status}
