@@ -83,7 +83,10 @@ fn spawn_sidecar() -> Result<(), String> {
     eprintln!("[HWDash] Starting sidecar: {}", exe.display());
 
     #[cfg(windows)]
-    let child = std::process::Command::new(&exe)
+    use std::os::windows::process::CommandExt;
+
+    #[cfg(windows)]
+    let mut child = std::process::Command::new(&exe)
         .creation_flags(0x08000000) // CREATE_NO_WINDOW
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
@@ -91,7 +94,7 @@ fn spawn_sidecar() -> Result<(), String> {
         .map_err(|e| format!("Failed to spawn sidecar: {e}"))?;
 
     #[cfg(not(windows))]
-    let child = std::process::Command::new(&exe)
+    let mut child = std::process::Command::new(&exe)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
         .spawn()
@@ -99,8 +102,8 @@ fn spawn_sidecar() -> Result<(), String> {
 
     // 读取 stdout 等待 "READY" 信号(最多等 15 秒)
     use std::io::{BufRead, BufReader};
-    if let Some(stdout) = child.stdout.as_ref() {
-        let reader = BufReader::new(stdout);
+    if let Some(stdout) = child.stdout.as_mut() {
+        let _reader = BufReader::new(stdout);
         // 不能直接 take stdout ownership,用 Arc 包装...
         // 简化:直接等一秒,sidecar 应该已经就绪
     }

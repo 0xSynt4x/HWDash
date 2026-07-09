@@ -16,3 +16,5 @@ settings.json
 hwmon-sidecar/bin/
 hwmon-sidecar/obj/
 src-tauri/binaries/
+# 构建输出目录
+build-output/
