@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
 import { Calendar } from 'lucide-react';
 import { SettingsMenu } from './components/SettingsMenu';
 import { useHardware } from './hooks/useHardware';
 import { useWeather } from './hooks/useWeather';
 import { useSettings } from './hooks/useSettings';
 import { DynamicLineGraph } from './components/UIComponents';
-import { CpuWidget, GpuWidget, RamWidget, NetworkWidget } from './components/Widgets';
+import { CpuWidget, GpuWidget, RamWidget, NetworkWidget, StorageWidget } from './components/Widgets';
+import { FrameMetricsWidget } from './components/FrameMetricsWidget';
 import { AnimatedWeather } from './components/AnimatedWeather';
 
 const isTauri = (): boolean => '__TAURI_INTERNALS__' in window;
@@ -19,7 +21,7 @@ const BASE_SIZES = {
 export default function App() {
   const { settings, loaded, update } = useSettings();
   const { time, status, getStr, getNum, hwData } = useHardware();
-  const { weather } = useWeather(settings.latitude, settings.longitude);
+  const { weather } = useWeather(settings.weather_province, settings.weather_city);
 
   const [showNicMenu, setShowNicMenu] = useState(false);
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
@@ -35,6 +37,24 @@ export default function App() {
     });
     return Array.from(nics).sort((a, b) => a - b);
   }, [hwData]);
+
+  // 首帧渲染完成后让主窗口显示出来。
+  // 窗口建出来时是隐藏的（见 src-tauri/src/lib.rs）：DWM 一旦让窗口可见就
+  // 立刻要一帧，等页面画完再显示，才不会出现"整块面板全透明"。
+  // 等两帧：第一帧 DOM 上屏，第二帧确保合成器已把内容交出去。
+  useEffect(() => {
+    if (!isTauri()) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        invoke('show_main_window').catch(() => {});
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, []);
 
   // 自动选择第一个可用 NIC(若当前未选或失效)
   useEffect(() => {
@@ -210,7 +230,10 @@ export default function App() {
                   getNum={getNum}
                   onContextMenu={handleNetworkRightClick}
                 />
+                <StorageWidget getStr={getStr} getNum={getNum} />
               </div>
+
+              <FrameMetricsWidget getStr={getStr} />
 
               <div className="flex-1 mt-auto border border-[var(--border-color)] rounded-md bg-[rgba(255,255,255,0.02)] flex flex-col p-2 min-h-[180px]">
                 <div className="flex justify-between items-center text-sm font-bold px-1 mb-1 border-b border-[var(--border-color)]/50 pb-1">
@@ -261,6 +284,7 @@ export default function App() {
 
                   <div className="flex flex-col gap-2 w-full mt-auto pt-2">
                     <RamWidget getNum={getNum} getStr={getStr} />
+                    <StorageWidget getStr={getStr} getNum={getNum} />
                     <NetworkWidget
                       networkName={settings.network_name}
                       setNetworkName={(v) => update('network_name', v)}
@@ -287,6 +311,8 @@ export default function App() {
                   />
                 </div>
               </div>
+
+              <FrameMetricsWidget getStr={getStr} />
 
               <div className="flex-1 border border-[var(--border-color)] rounded-md bg-[rgba(255,255,255,0.02)] flex flex-col p-2 w-full">
                 <div className="flex justify-between items-center text-sm font-bold px-1 mb-1 border-b border-[var(--border-color)]/50 pb-1">
@@ -347,7 +373,7 @@ export default function App() {
                   setShowNicMenu(false);
                 }}
               >
-                NIC {nic}
+                {getStr(`SNIC${nic}NAME`, `NIC ${nic}`)}
               </div>
             ))
           ) : (

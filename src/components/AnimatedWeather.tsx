@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GlobalStyles = () => (
+const GlobalStyles = React.memo(() => (
   <style>{`
     @keyframes we-spin { 100% { transform: rotate(360deg); } }
     @keyframes we-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
@@ -28,7 +28,7 @@ const GlobalStyles = () => (
     .we-float-anim { animation: we-float 4s ease-in-out infinite; }
     .we-flash-anim { transform-origin: center; animation: we-flash 3s infinite; }
   `}</style>
-);
+));
 
 const Sun = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 64 64" className={className} width="1em" height="1em">

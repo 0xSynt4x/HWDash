@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "HWDash",
-  "version": "0.3.0",
+  "version": "0.4.2",
   "identifier": "com.dylan.hwdash",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -10,18 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "HWDash",
-        "width": 280,
-        "height": 960,
-        "decorations": false,
-        "transparent": true,
-        "skipTaskbar": true,
-        "visible": true,
-        "focus": false
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
     }
@@ -29,6 +18,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+      "nsis": {
+        "installMode": "perMachine"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,6 +32,23 @@
     ],
     "externalBin": [
       "binaries/hwdash-sidecar"
-    ]
+    ],
+    "resources": {
+      "binaries/BlackSharp.Core.dll": "BlackSharp.Core.dll",
+      "binaries/DiskInfoToolkit.dll": "DiskInfoToolkit.dll",
+      "binaries/HidSharp.dll": "HidSharp.dll",
+      "binaries/LibreHardwareMonitorLib.dll": "LibreHardwareMonitorLib.dll",
+      "binaries/Mono.Posix.NETStandard.dll": "Mono.Posix.NETStandard.dll",
+      "binaries/MonoPosixHelper.dll": "MonoPosixHelper.dll",
+      "binaries/RAMSPDToolkit-NDD.dll": "RAMSPDToolkit-NDD.dll",
+      "binaries/System.CodeDom.dll": "System.CodeDom.dll",
+      "binaries/System.IO.Ports.dll": "System.IO.Ports.dll",
+      "binaries/System.Management.dll": "System.Management.dll",
+      "binaries/System.Threading.AccessControl.dll": "System.Threading.AccessControl.dll",
+      "binaries/libMonoPosixHelper.dll": "libMonoPosixHelper.dll",
+      "binaries/hwdash-sidecar.deps.json": "hwdash-sidecar.deps.json",
+      "binaries/hwdash-sidecar.dll": "hwdash-sidecar.dll",
+      "binaries/hwdash-sidecar.runtimeconfig.json": "hwdash-sidecar.runtimeconfig.json"
+    }
   }
 }

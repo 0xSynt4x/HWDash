@@ -16,16 +16,20 @@ interface LocationPreset {
   name: string;
   lat: number;
   lon: number;
+  /** 腾讯天气接口所需的省市名;境外城市腾讯不覆盖,留空即不请求天气 */
+  province: string;
+  city: string;
 }
 
 const LOCATION_PRESETS: LocationPreset[] = [
-  { name: 'Urumqi', lat: 43.8, lon: 87.6 },
-  { name: 'Beijing', lat: 39.9, lon: 116.4 },
-  { name: 'Shanghai', lat: 31.23, lon: 121.47 },
-  { name: 'Shenzhen', lat: 22.54, lon: 114.06 },
-  { name: 'Tokyo', lat: 35.68, lon: 139.69 },
-  { name: 'New York', lat: 40.71, lon: -74.0 },
-  { name: 'London', lat: 51.51, lon: -0.13 },
+  { name: 'Urumqi', lat: 43.8, lon: 87.6, province: '新疆', city: '乌鲁木齐' },
+  { name: 'Beijing', lat: 39.9, lon: 116.4, province: '北京', city: '北京' },
+  { name: 'Shanghai', lat: 31.23, lon: 121.47, province: '上海', city: '上海' },
+  { name: 'Shenzhen', lat: 22.54, lon: 114.06, province: '广东', city: '深圳' },
+  { name: 'Chengdu', lat: 30.57, lon: 104.07, province: '四川', city: '成都' },
+  { name: 'Tokyo', lat: 35.68, lon: 139.69, province: '', city: '' },
+  { name: 'New York', lat: 40.71, lon: -74.0, province: '', city: '' },
+  { name: 'London', lat: 51.51, lon: -0.13, province: '', city: '' },
 ];
 
 const THEMES: Theme[] = ['dark', 'light', 'tesla', 'ferrari'];
@@ -141,6 +145,8 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ x, y, onClose, setti
     update('latitude', p.lat);
     update('longitude', p.lon);
     update('location_name', p.name);
+    update('weather_province', p.province);
+    update('weather_city', p.city);
     setLatInput(p.lat.toString());
     setLonInput(p.lon.toString());
   };

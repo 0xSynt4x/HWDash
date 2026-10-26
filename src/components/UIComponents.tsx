@@ -92,7 +92,7 @@ export const StatRow: React.FC<StatRowProps> = ({
   colorClass = 'text-[var(--text-primary)]',
 }) => (
   <div className="flex items-center justify-between px-1 py-0 font-mono text-[14px] leading-tight hover:bg-[var(--bg-gradient-1)]/30 transition-colors rounded">
-    <div className="flex items-center gap-2 text-[var(--text-secondary)] w-28 shrink-0">
+    <div className="flex items-center gap-2 text-[var(--text-secondary)] w-24 shrink-0">
       {Icon && <Icon size={12} className="opacity-60 shrink-0" />}
       <span className="truncate">{label}</span>
     </div>
@@ -149,7 +149,7 @@ export const DynamicLineGraph: React.FC<DynamicLineGraphProps> = ({
   fps = 0,
 }) => {
   const [history, setHistory] = useState<HistoryPoint[]>(() =>
-    Array(60).fill({ cpu: 0, gpu: 0, fps: 0 })
+    Array.from({ length: 60 }, () => ({ cpu: 0, gpu: 0, fps: 0 }))
   );
   useEffect(() => {
     setHistory((prev) => [...prev.slice(1), { cpu: cpuPower, gpu: gpuPower, fps }]);
@@ -166,8 +166,6 @@ export const DynamicLineGraph: React.FC<DynamicLineGraphProps> = ({
       })
       .join(' ');
   };
-
-  const lastCpu = history[history.length - 1]?.cpu ?? 0;
 
   return (
     <div className="relative w-full h-full">
@@ -191,13 +189,6 @@ export const DynamicLineGraph: React.FC<DynamicLineGraphProps> = ({
         <polyline points={createPath('cpu')} fill="none" stroke="var(--chart-cpu)" strokeWidth="1.5" opacity="0.9" />
         <polyline points={createPath('gpu')} fill="none" stroke="var(--chart-gpu)" strokeWidth="1.5" opacity="0.9" />
         <polyline points={createPath('fps')} fill="none" stroke="var(--chart-fps)" strokeWidth="1.5" opacity="0.9" />
-        <circle
-          cx="99"
-          cy={100 - (Math.min(lastCpu, maxValues.cpu) / maxValues.cpu) * 100}
-          r="2"
-          fill="var(--chart-cpu)"
-          opacity="0.8"
-        />
       </svg>
     </div>
   );

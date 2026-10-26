@@ -1,6 +1,6 @@
 [package]
 name = "hwdash"
-version = "0.3.0"
+version = "0.4.2"
 description = "Hardware Dashboard - LibreHardwareMonitor Sidecar"
 authors = ["Dylan"]
 edition = "2021"
@@ -16,7 +16,12 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
-tauri-winres = "0.3"
+# 不再需要 tauri-winres：Windows 资源（VERSION/manifest/图标）统一由 tauri-build 编译。
+# 手动再编译一份会与其产出的 OUT_DIR/resource.lib 同名，链接器报 CVT1100 资源重复。
+# 与 [dependencies] 中同一处修复,但必须在这里再声明一次:
+# Cargo resolver v2 下 build-dependencies 的 feature 不与普通 dependencies 统一,
+# 而 schemars 是通过 tauri-build(build-dependencies) 引入的,其 indexmap 需要独立启用 std。
+indexmap = { version = "1.9", features = ["std"] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "custom-protocol"] }
@@ -25,4 +30,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
 tokio = { version = "1", features = ["process", "io-util", "time"] }
+
+# 修复 schemars 0.8.22 与 indexmap 1.9.3 的 feature 冲突:
+# indexmap 1.x 的 `has_std` cfg 由 `std` feature 决定,未启用时 IndexMap 没有默认泛型参数
+# (IndexMap<K, V, S> 而非 IndexMap<K, V, S = RandomState>),导致 schemars 的
+# `pub type Map<K, V> = indexmap::IndexMap<K, V>;` 报 E0107(缺少第 3 个泛型参数)。
+# 这里显式声明 indexmap 1.9 并启用 std,使 `has_std` 成立。
+indexmap = { version = "1.9", features = ["std"] }
 

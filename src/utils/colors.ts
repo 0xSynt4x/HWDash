@@ -1,17 +1,19 @@
 export const getValueColor = (
   val: number,
-  type: 'temp' | 'fan' | 'fan_percent' | 'load' | 'voltage_cpu' | 'voltage_gpu' | 'ram'
+  type: 'temp' | 'fan' | 'load' | 'voltage_cpu' | 'voltage_gpu' | 'ram' | 'dimm'
 ) => {
   let t = [0, 0, 0]
   switch (type) {
     case 'temp':
       t = [55, 70, 80]
       break
+    case 'dimm':
+      // 内存条温度只有三档:默认白 / >45 黄 / >55 红。
+      // 函数是四档结构(白/绿/黄/红),把前两档阈值都设成 45 就把"绿"这一档跳过了。
+      t = [45, 45, 55]
+      break
     case 'fan':
       t = [1000, 1200, 1500]
-      break
-    case 'fan_percent':
-      t = [30, 50, 75]
       break
     case 'load':
       t = [15, 50, 80]

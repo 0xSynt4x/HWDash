@@ -5,11 +5,14 @@ const isTauri = (): boolean => '__TAURI_INTERNALS__' in window;
 
 export type HardwareData = Record<string, string>;
 
-const TICK_INTERVAL_MS = 1000;
+const TICK_INTERVAL_MS = 500;
 
 /**
  * 驱动硬件数据读取(通过 LibreHardwareMonitor Sidecar)与时钟更新
- * 合并为单个 1Hz tick,减少 React state 更新次数
+ * 合并为单个 2Hz tick,减少 React state 更新次数
+ *
+ * 500ms 必须与 sidecar 的 CacheTtl(400ms)配套:TTL 一旦 >= 本间隔,
+ * 就会每隔一拍命中缓存、拿到上一拍的重复值。
  */
 export function useHardware() {
   const [hwData, setHwData] = useState<HardwareData>({});

@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use tauri::{AppHandle, Manager};
 
 /// 应用设置:替代 localStorage,便携模式持久化为 JSON
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +26,13 @@ pub struct AppSettings {
     pub longitude: f64,
     #[serde(default = "default_location_name")]
     pub location_name: String,
+    /// 腾讯天气接口所需的省 / 市名称(仅覆盖国内城市)。
+    /// 两个都非空时才发起请求;任一为空则天气留空不请求。
+    /// latitude / longitude 仅用于设置界面回显城市预设,不再参与天气取值。
+    #[serde(default = "default_weather_province")]
+    pub weather_province: String,
+    #[serde(default = "default_weather_city")]
+    pub weather_city: String,
 }
 
 fn default_theme() -> String {
@@ -61,6 +67,12 @@ fn default_longitude() -> f64 {
 fn default_location_name() -> String {
     "—".to_string()
 }
+fn default_weather_province() -> String {
+    "新疆".to_string()
+}
+fn default_weather_city() -> String {
+    "乌鲁木齐".to_string()
+}
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -75,6 +87,8 @@ impl Default for AppSettings {
             latitude: default_latitude(),
             longitude: default_longitude(),
             location_name: default_location_name(),
+            weather_province: default_weather_province(),
+            weather_city: default_weather_city(),
         }
     }
 }
@@ -83,46 +97,36 @@ impl Default for AppSettings {
 /// (用户调整 zoom 时去抖写入会高频调用此函数)
 static CACHED_PATH: OnceLock<PathBuf> = OnceLock::new();
 
-/// 获取设置文件路径:优先 exe 同目录(便携),失败回退到 app_data_dir
-fn settings_path(app: &AppHandle) -> PathBuf {
+/// 获取设置文件路径:固定为 exe 同目录(便携模式),不写 AppData。
+///
+/// 安装目录是 `C:\Program Files\HWDash`(per-machine),程序带
+/// `requireAdministrator` 清单、每次启动都会提权,所以该目录始终可写。
+/// 因此不再保留 `%APPDATA%` 回退分支 —— 万一真写不进去,
+/// `write_settings` 会把错误返回给前端,不会静默丢设置。
+fn settings_path() -> PathBuf {
     if let Some(p) = CACHED_PATH.get() {
         return p.clone();
     }
 
-    let resolved = resolve_settings_path(app);
+    let resolved = resolve_settings_path();
     // OnceLock::set 仅第一次成功,后续返回 Err — 直接忽略,以已写入值为准
     let _ = CACHED_PATH.set(resolved.clone());
     resolved
 }
 
-fn resolve_settings_path(app: &AppHandle) -> PathBuf {
+fn resolve_settings_path() -> PathBuf {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let portable = dir.join("settings.json");
-            // 测试目录是否可写:存在文件直接用,否则尝试创建标记文件
-            if portable.exists() {
-                return portable;
-            }
-            // 尝试在该目录写一个临时文件,看是否有写权限
-            let probe = dir.join(".hwdash_write_probe");
-            if fs::write(&probe, b"").is_ok() {
-                let _ = fs::remove_file(&probe);
-                return portable;
-            }
+            return dir.join("settings.json");
         }
     }
-    // 回退:AppData 目录
-    if let Ok(dir) = app.path().app_config_dir() {
-        let _ = fs::create_dir_all(&dir);
-        return dir.join("settings.json");
-    }
-    // 最终兜底:当前工作目录
+    // 仅当拿不到 current_exe 时才会走到这里
     PathBuf::from("settings.json")
 }
 
 #[tauri::command]
-pub fn read_settings(app: AppHandle) -> AppSettings {
-    let path = settings_path(&app);
+pub fn read_settings() -> AppSettings {
+    let path = settings_path();
     match fs::read_to_string(&path) {
         Ok(content) => match serde_json::from_str::<AppSettings>(&content) {
             Ok(s) => s,
@@ -141,8 +145,8 @@ pub fn read_settings(app: AppHandle) -> AppSettings {
 }
 
 #[tauri::command]
-pub fn write_settings(app: AppHandle, settings: AppSettings) -> Result<(), String> {
-    let path = settings_path(&app);
+pub fn write_settings(settings: AppSettings) -> Result<(), String> {
+    let path = settings_path();
     if let Some(parent) = path.parent() {
         let _ = fs::create_dir_all(parent);
     }
@@ -169,6 +173,6 @@ pub fn write_settings(app: AppHandle, settings: AppSettings) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub fn settings_file_path(app: AppHandle) -> String {
-    settings_path(&app).to_string_lossy().to_string()
+pub fn settings_file_path() -> String {
+    settings_path().to_string_lossy().to_string()
 }

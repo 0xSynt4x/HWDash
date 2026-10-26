@@ -15,6 +15,8 @@ export interface AppSettings {
   latitude: number;
   longitude: number;
   location_name: string;
+  weather_province: string;
+  weather_city: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -28,6 +30,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   latitude: 43.8,
   longitude: 87.6,
   location_name: 'Urumqi',
+  weather_province: '新疆',
+  weather_city: '乌鲁木齐',
 };
 
 const isTauri = (): boolean => '__TAURI_INTERNALS__' in window;
