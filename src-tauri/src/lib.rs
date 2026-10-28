@@ -260,6 +260,32 @@ async fn check_sidecar_status() -> Result<String, String> {
     }
 }
 
+/// 手动刷新机械盘(HDD)后返回最新完整数据。
+///
+/// HDD 运行期永不自动 Update(`HddRefreshInterval = TimeSpan.Zero`,避免磁头被
+/// 周期性惊醒),所以硬盘卡片上的温度和读写速率会一直是启动预热时读到的旧值。
+/// 用户双击硬盘卡片时前端调这里 → sidecar 强制读一次 HDD → 立刻返回全量数据。
+///
+/// 为什么不让前端直接 fetch sidecar:CSP 的 connect-src 只放行 'self' / ipc,
+/// webview 里 fetch localhost:7453 会被直接拦掉(双击没反应就是这么来的)。
+#[tauri::command]
+async fn refresh_hdds() -> Result<HashMap<String, String>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|e| format!("HTTP client error: {e}"))?;
+
+    let resp = client
+        .get("http://localhost:7453/api/hdd-refresh")
+        .send()
+        .await
+        .map_err(|e| format!("HDD refresh request failed: {e}"))?;
+
+    resp.json::<HashMap<String, String>>()
+        .await
+        .map_err(|e| format!("HDD refresh JSON error: {e}"))
+}
+
 /// 腾讯天气 weather_code -> 图标
 fn tencent_weather_icon(code: &str) -> &'static str {
     match code {
@@ -474,6 +500,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_hardware_data,
             check_sidecar_status,
+            refresh_hdds,
             get_weather,
             show_main_window,
             settings::read_settings,

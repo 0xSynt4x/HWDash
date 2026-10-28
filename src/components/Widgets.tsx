@@ -1,4 +1,5 @@
 import React from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Cpu,
   HardDrive,
@@ -414,12 +415,13 @@ export const StorageWidget: React.FC<StorageWidgetProps> = ({ getStr, getNum }) 
     return n >= 100 ? String(Math.round(n)) : n.toFixed(1);
   };
 
-  // 双击盘行 → 手动刷新 HDD(sidecar /api/hdd-refresh)。
-  // 运行期 HDD 永不自动读(磁头不能被周期性惊动),想看新数据就双击任意盘行
-  // —— sidecar 只刷 /hdd/,对 SSD 无副作用。返回体是刷新后的完整数据,
-  // 500ms 轮询下一拍会自然带上,这里不用手动 setState。
+  // 双击盘行 → 手动刷新 HDD。
+  // 运行期 HDD 永不自动读(磁头不能被周期性惊动),想看新数据就双击。
+  // 必须走 Tauri command 而不是直接 fetch sidecar:CSP 的 connect-src 只放行
+  // 'self' / ipc,webview 里 fetch localhost:7453 会被静默拦掉。
+  // 不用手动 setState —— 500ms 轮询下一拍会自然带上新值。
   const refreshHdd = () => {
-    fetch('http://localhost:7453/api/hdd-refresh').catch(() => {});
+    invoke('refresh_hdds').catch(() => {});
   };
 
   return (
